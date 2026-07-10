@@ -1,0 +1,15 @@
+appId: com.jaden.watchpup
+productName: Watchpup
+directories:
+  output: out
+files:
+  - dist/electron/**
+  - renderer/**
+  - package.json
+asarUnpack:
+  - "**/node_modules/@napi-rs/keyring/**"
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  icon: build/icon.png
+publish: null

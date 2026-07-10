@@ -1,0 +1,14 @@
+node_modules
+data
+*.log
+dist
+out
+
+watchpup.config.yaml
+.superpowers
+
+.DS_Store
+**/.DS_Store
+
+# 내부 설계 문서(개인 경로·내부 프로젝트명 포함) — 공개 제외
+docs/superpowers/

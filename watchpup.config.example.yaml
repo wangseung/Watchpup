@@ -1,0 +1,35 @@
+# Watchpup 설정 예시 — watchpup.config.yaml 로 복사해 사용
+# 시크릿(토큰)은 여기 넣지 않는다 → `npm run setup` 으로 Keychain 저장.
+
+botName: watchpup
+model: opus            # claude 모델 (opus | sonnet | ...)
+maxBudgetUsd: 0        # 0 = 무제한(구독). 양수면 요청당 상한.
+maxConcurrency: 2
+
+# 감지 대상 = 나 (필수) — Slack 프로필의 member ID (예: U01ABCDEF)
+mySlackUserId: ""
+# 내가 참여한 스레드의 후속 메시지도 감지할지
+followThreads: true
+
+# Obsidian 지식베이스 (멘션·조언·todo 노트 기록)
+obsidian:
+  enabled: false
+  vaultPath: ""        # 예: /Users/me/Obsidian/MyVault
+  folder: watchpup
+
+# MCP 서버 (자율 조사용 — 선택). id 는 tool 이름 prefix.
+# writeTools 는 읽기 전용 분석에서 --disallowedTools 로 차단된다.
+mcpServers: []
+# 예)
+# mcpServers:
+#   - id: slack
+#     transport: stdio
+#     command: npx
+#     args: ["-y", "@modelcontextprotocol/server-slack"]
+#     enabled: true
+#     writeTools: ["send_message"]
+#     secretEnv: { SLACK_MCP_TOKEN: SLACK_MCP_TOKEN }
+
+workDir: ./data/workdir
+dataDir: ./data
+keychainService: watchpup

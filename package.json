@@ -1,0 +1,42 @@
+{
+  "name": "watchpup-core",
+  "version": "0.1.0",
+  "description": "Watchpup은 화면 구석에 사는 macOS 데스크톱 펫으로, 내 Slack 멘션을 대신 지켜봅니다.",
+  "author": "jaden.seo",
+  "private": true,
+  "type": "module",
+  "main": "dist/electron/main.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsx watch src/core/cli/run.ts",
+    "setup": "tsx src/core/cli/setup.ts",
+    "build:app": "node esbuild.electron.mjs",
+    "app": "npm run build:app && electron dist/electron/main.js",
+    "dist": "npm run build:app && electron-builder"
+  },
+  "dependencies": {
+    "@napi-rs/keyring": "^1.1.6",
+    "@slack/bolt": "^4.2.0",
+    "@slack/web-api": "^7.8.0",
+    "electron-updater": "^6.3.9",
+    "js-yaml": "^4.1.0",
+    "lru-cache": "^11.0.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

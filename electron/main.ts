@@ -158,9 +158,8 @@ async function main(): Promise<void> {
     }
   })
 
-  // 트레이/펫 클릭 시 blur가 먼저 발생해 패널을 숨기고, 뒤이어 togglePanel이 실행되면
   // 마스터-디테일 패널은 옆에 두고 참조하는 창 → 포커스 잃어도 자동으로 닫지 않는다.
-  // 닫기는 ESC / X 버튼 / 펫(트레이) 토글로만.
+  // 닫기는 ESC / X 버튼 / 트레이 토글로만. 펫 더블클릭은 열기만 한다.
 
   const tray = new Tray(nativeImage.createEmpty())
   tray.setTitle('🐾')
@@ -199,8 +198,8 @@ async function main(): Promise<void> {
   }
   tray.on('click', () => togglePanel())
 
-  // 펫 창 전용 IPC (window.watchpup.togglePanel / setMouseIgnore)
-  ipcMain.on('pet.togglePanel', () => togglePanel())
+  // 펫 창 전용 IPC (더블클릭은 패널 열기 전용)
+  ipcMain.on('pet.showPanel', () => showPanelHome())
   // 말풍선 클릭 → 패널 열고 해당 스레드 선택
   const openMentionPanel = (id: string): void => {
     const win = activePanel()

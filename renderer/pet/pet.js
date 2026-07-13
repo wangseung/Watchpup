@@ -487,10 +487,10 @@ activityHud.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(
 activityHud.addEventListener('click', (event) => {
   if (event.target === activityHud || event.target === activityList) window.watchpup.openActivityDetail()
 })
-// 말풍선/HUD 상태 줄 클릭 → 스레드가 연결돼 있으면 그 스레드를 열고, 아니면 패널 토글
+// 말풍선 클릭 → 스레드가 연결돼 있으면 그 스레드를 열고, 아니면 패널을 연다.
 function openBubbleTarget() {
   if (bubbleMentionId) window.watchpup.openMention(bubbleMentionId)
-  else window.watchpup.togglePanel()
+  else window.watchpup.showPanel()
   hideBubbleSurface()
 }
 bubble.addEventListener('click', openBubbleTarget)
@@ -526,12 +526,9 @@ window.addEventListener('mouseup', () => {
   pet.classList.remove('dragging')
   window.watchpup.petDragEnd()
 })
-pet.addEventListener('click', () => {
-  if (moved) {
-    moved = false
-    return
-  }
-  window.watchpup.togglePanel()
+pet.addEventListener('dblclick', () => {
+  if (moved) return
+  window.watchpup.showPanel()
   badge.classList.add('hidden')
 })
 

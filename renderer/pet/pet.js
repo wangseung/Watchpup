@@ -506,11 +506,9 @@ hudFold.addEventListener('click', () => setHudFolded(!hudFolded))
 
 // ---- click-through 토글 (몸통 위에서만 상호작용) ----
 pet.addEventListener('mouseenter', () => {
-  window.watchpup.setPanelActivationGuard(true)
   window.watchpup.setMouseIgnore(false)
 })
 pet.addEventListener('mouseleave', () => {
-  window.watchpup.setPanelActivationGuard(false)
   window.watchpup.setMouseIgnore(true)
 })
 

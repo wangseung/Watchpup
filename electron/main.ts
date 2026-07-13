@@ -163,12 +163,6 @@ async function main(): Promise<void> {
 
   const tray = new Tray(nativeImage.createEmpty())
   tray.setTitle('🐾')
-  let panelActivationGuarded = false
-
-  function releasePanelActivationGuard(win: BrowserWindow): void {
-    panelActivationGuarded = false
-    if (!win.isFocusable()) win.setFocusable(true)
-  }
 
   function clearPanelBadge(): void {
     unread = 0
@@ -181,7 +175,6 @@ async function main(): Promise<void> {
   function showPanelHome(): void {
     const win = activePanel()
     if (!win) return
-    releasePanelActivationGuard(win)
     if (!win.isVisible()) win.show()
     win.focus()
     send(win, 'panel.shown', {}) // 열 때 항상 멘션 목록부터(직전 설정 탭 잔상 방지)
@@ -198,7 +191,6 @@ async function main(): Promise<void> {
   function openActivityPanel(id: string): void {
     const win = activePanel()
     if (!win) return
-    releasePanelActivationGuard(win)
     if (!win.isVisible()) win.show()
     win.focus()
     clearPanelBadge()
@@ -208,22 +200,10 @@ async function main(): Promise<void> {
 
   // 펫 창 전용 IPC (더블클릭은 패널 열기 전용)
   ipcMain.on('pet.showPanel', () => showPanelHome())
-  ipcMain.on('pet.panelActivationGuard', (_e, guarded: boolean) => {
-    const win = activePanel()
-    if (!win) return
-    if (guarded) {
-      if (!win.isVisible() || win.isFocused()) return
-      panelActivationGuarded = true
-      if (win.isFocusable()) win.setFocusable(false)
-    } else if (panelActivationGuarded) {
-      releasePanelActivationGuard(win)
-    }
-  })
   // 말풍선 클릭 → 패널 열고 해당 스레드 선택
   const openMentionPanel = (id: string): void => {
     const win = activePanel()
     if (!win || typeof id !== 'string' || !id) return
-    releasePanelActivationGuard(win)
     if (!win.isVisible()) {
       win.show()
       clearPanelBadge()

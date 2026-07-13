@@ -103,7 +103,6 @@ contextBridge.exposeInMainWorld('watchpup', {
   setCategory: (mentionId: string, category: string) => ipcRenderer.invoke('mention.setCategory', { mentionId, category }),
   restartApp: () => ipcRenderer.send('app.restart'),
   showPanel: () => ipcRenderer.send('pet.showPanel'),
-  setPanelActivationGuard: (guarded: boolean) => ipcRenderer.send('pet.panelActivationGuard', guarded),
   setMouseIgnore: (ignore: boolean) => ipcRenderer.send('pet.setMouseIgnore', ignore),
   petDragStart: () => ipcRenderer.send('pet.dragStart'),
   petDragEnd: () => ipcRenderer.send('pet.dragEnd'),

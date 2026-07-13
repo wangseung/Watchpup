@@ -75,6 +75,10 @@ export const watchpupConfigSchema = z.object({
   petAlwaysOnTop: z.boolean().default(true),
   // 펫 표시 크기(%). 이모지·커스텀 이미지·Codex Pet에 공통 적용.
   petSizePercent: z.number().int().min(50).max(200).default(100),
+  // 펫 위에 잠깐 표시되는 상태/분석 말풍선 크기(%).
+  bubbleSizePercent: z.number().int().min(60).max(140).default(100),
+  // 펫 아래에 표시되는 Claude/Codex/Slack 세션 HUD 크기(%).
+  hudSizePercent: z.number().int().min(60).max(140).default(100),
   // 커스텀 펫 이미지 폴더(설정 시 이모지 대신 이미지 사용, 공모양 배경 제거).
   // 폴더에 idle/thinking/ready/chatting.(gif|png|apng|webp|jpg) 파일을 두면 상태별로 사용.
   petImageDir: z.string().default(''),

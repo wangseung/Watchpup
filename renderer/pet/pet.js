@@ -17,6 +17,8 @@ let images = {} // 상태별 file:// 경로 (하나라도 있으면 이미지 �
 let codex = null // { spritesheet, displayName } | null (설정 시 gif/이모지보다 우선)
 let currentState = 'idle'
 let petSizePercent = 100
+let bubbleSizePercent = 100
+let hudSizePercent = 100
 
 function imageMode() {
   return Object.keys(images).length > 0
@@ -157,9 +159,53 @@ function setPetSize(value) {
   syncSize()
 }
 
+function clampSurfaceSize(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? Math.max(60, Math.min(140, Math.round(parsed))) : 100
+}
+
+function setBubbleSize(value) {
+  bubbleSizePercent = clampSurfaceSize(value)
+  const scale = bubbleSizePercent / 100
+  const root = document.documentElement.style
+  root.setProperty('--bubble-max-width', `${Math.round(320 * scale)}px`)
+  root.setProperty('--bubble-padding-y', `${Math.round(9 * scale)}px`)
+  root.setProperty('--bubble-padding-x', `${Math.round(14 * scale)}px`)
+  root.setProperty('--bubble-radius', `${Math.round(20 * scale)}px`)
+  root.setProperty('--bubble-font-size', `${Math.max(10, Math.round(13 * scale))}px`)
+  syncSize()
+}
+
+function setHudSize(value) {
+  hudSizePercent = clampSurfaceSize(value)
+  const scale = hudSizePercent / 100
+  const root = document.documentElement.style
+  const px = (name, base, minimum = 1) => root.setProperty(name, `${Math.max(minimum, Math.round(base * scale))}px`)
+  px('--hud-width', 532)
+  px('--hud-padding', 7)
+  px('--hud-radius', 16)
+  px('--hud-row-height', 38)
+  px('--hud-dot-column', 8)
+  px('--hud-icon-column', 24)
+  px('--hud-row-gap', 8)
+  px('--hud-row-padding', 9)
+  px('--hud-row-radius', 10)
+  px('--hud-dot-size', 7, 4)
+  px('--hud-icon-size', 22, 12)
+  px('--hud-icon-radius', 6)
+  px('--hud-title-size', 13, 9)
+  px('--hud-pill-padding-y', 3)
+  px('--hud-pill-padding-x', 7)
+  px('--hud-meta-size', 10, 8)
+  px('--hud-elapsed-width', 31)
+  syncSize()
+}
+
 window.watchpup.settingsGet().then((cfg) => {
   setTheme(cfg?.petTheme)
   setPetSize(cfg?.petSizePercent)
+  setBubbleSize(cfg?.bubbleSizePercent)
+  setHudSize(cfg?.hudSizePercent)
 }).catch(() => {})
 window.watchpup.petImages().then(setImages).catch(() => {})
 window.watchpup.petCodex().then(setCodex).catch(() => {})
@@ -167,6 +213,8 @@ if (window.watchpup.onPetTheme) window.watchpup.onPetTheme((n) => setTheme(typeo
 if (window.watchpup.onPetImages) window.watchpup.onPetImages(setImages)
 if (window.watchpup.onPetCodex) window.watchpup.onPetCodex(setCodex)
 if (window.watchpup.onPetSize) window.watchpup.onPetSize(setPetSize)
+if (window.watchpup.onBubbleSize) window.watchpup.onBubbleSize(setBubbleSize)
+if (window.watchpup.onHudSize) window.watchpup.onHudSize(setHudSize)
 
 window.watchpup.onPet((s) => {
   currentState = STATES.includes(s) ? s : 'idle'
@@ -200,7 +248,9 @@ function syncSize() {
     const visibleBlocks = 1 + Number(visible) + Number(hudVisible)
     const gaps = Math.max(0, visibleBlocks - 1) * 12
     const need = petArea + bubbleH + hudH + gaps + PET_CHROME
-    window.watchpup.petResize({ width: hudVisible ? 560 : 340, height: Math.ceil(need) })
+    // 현재 창이 좁아도 설정값 기준 목표 폭을 계산해야 다시 넓힐 수 있다.
+    const hudWidth = hudVisible ? Math.ceil(532 * hudSizePercent / 100 + 28) : 0
+    window.watchpup.petResize({ width: hudVisible ? Math.max(340, hudWidth) : 340, height: Math.ceil(need) })
   })
 }
 

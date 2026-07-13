@@ -6,6 +6,28 @@
   --pet-circle-size: 104px;
   --pet-media-size: 128px;
   --pet-face-size: 46px;
+  --bubble-max-width: 320px;
+  --bubble-padding-y: 9px;
+  --bubble-padding-x: 14px;
+  --bubble-radius: 20px;
+  --bubble-font-size: 13px;
+  --hud-width: 532px;
+  --hud-padding: 7px;
+  --hud-radius: 16px;
+  --hud-row-height: 38px;
+  --hud-dot-column: 8px;
+  --hud-icon-column: 24px;
+  --hud-row-gap: 8px;
+  --hud-row-padding: 9px;
+  --hud-row-radius: 10px;
+  --hud-dot-size: 7px;
+  --hud-icon-size: 22px;
+  --hud-icon-radius: 6px;
+  --hud-title-size: 13px;
+  --hud-pill-padding-y: 3px;
+  --hud-pill-padding-x: 7px;
+  --hud-meta-size: 10px;
+  --hud-elapsed-width: 31px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -35,11 +57,11 @@ body {
 
 /* ---- 최근 Claude / Codex / Slack 활동 ---- */
 .activity-hud {
-  width: min(532px, 100%);
-  padding: 7px;
+  width: min(var(--hud-width), 100%);
+  padding: var(--hud-padding);
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
+  border-radius: var(--hud-radius);
   background: rgba(19, 21, 24, 0.94);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
@@ -52,14 +74,14 @@ body {
 .activity-list { display: grid; gap: 2px; }
 .activity-row {
   width: 100%;
-  height: 38px;
+  height: var(--hud-row-height);
   display: grid;
-  grid-template-columns: 8px 24px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: var(--hud-dot-column) var(--hud-icon-column) minmax(0, 1fr) auto auto auto;
   align-items: center;
-  gap: 8px;
-  padding: 0 9px;
+  gap: var(--hud-row-gap);
+  padding: 0 var(--hud-row-padding);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--hud-row-radius);
   background: transparent;
   color: #f5f5f7;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
@@ -70,8 +92,8 @@ body {
 .activity-row:active { background: rgba(255, 255, 255, 0.12); }
 .activity-row:focus-visible { outline: 2px solid rgba(83, 155, 245, 0.9); outline-offset: -2px; }
 .activity-dot {
-  width: 7px;
-  height: 7px;
+  width: var(--hud-dot-size);
+  height: var(--hud-dot-size);
   border-radius: 50%;
   background: #8d929b;
   box-shadow: 0 0 0 3px rgba(141, 146, 155, 0.12);
@@ -80,9 +102,9 @@ body {
 .state-done .activity-dot { background: #6fa9ef; box-shadow: 0 0 0 3px rgba(111, 169, 239, 0.13); }
 .state-error .activity-dot { background: #ff6b6b; box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.14); }
 .activity-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: var(--hud-icon-size);
+  height: var(--hud-icon-size);
+  border-radius: var(--hud-icon-radius);
   object-fit: contain;
 }
 .activity-title {
@@ -90,18 +112,18 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--hud-title-size);
   font-weight: 550;
   letter-spacing: -0.12px;
 }
 .activity-state,
 .activity-context {
-  padding: 3px 7px;
+  padding: var(--hud-pill-padding-y) var(--hud-pill-padding-x);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.07);
   color: rgba(245, 245, 247, 0.76);
-  font-size: 10px;
+  font-size: var(--hud-meta-size);
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
@@ -110,9 +132,9 @@ body {
 .state-error .activity-state { color: #ffaaaa; background: rgba(255, 107, 107, 0.1); }
 .activity-context { color: #a8c8f3; }
 .activity-elapsed {
-  min-width: 31px;
+  min-width: var(--hud-elapsed-width);
   color: rgba(245, 245, 247, 0.48);
-  font-size: 10px;
+  font-size: var(--hud-meta-size);
   text-align: right;
   white-space: nowrap;
 }
@@ -121,16 +143,16 @@ body {
 .bubble {
   align-self: center;
   width: fit-content;
-  max-width: min(320px, 100%);
+  max-width: min(var(--bubble-max-width), 100%);
   box-sizing: border-box;
   /* HUD가 창 폭을 넓혀도 말풍선은 기존 컴팩트 폭을 유지한다. */
   overflow: visible;
-  padding: 9px 14px;
-  border-radius: 20px;
+  padding: var(--bubble-padding-y) var(--bubble-padding-x);
+  border-radius: var(--bubble-radius);
   border: 1px solid var(--bubble-outline);
   background: var(--bubble-bg);
   color: var(--bubble-fg);
-  font: 600 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font: 600 var(--bubble-font-size)/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   letter-spacing: -0.12px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),

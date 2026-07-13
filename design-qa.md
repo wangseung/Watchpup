@@ -1,16 +1,17 @@
-# Session HUD Design QA
+# Bubble / Session HUD Size Design QA
 
-- reference: Clawd on Desk 세션 HUD 캡처 (`image-1.png`)
-- implementation: 로컬 Electron의 `watchpup pet` 창
-- comparison: `.design-qa/comparison.png` (로컬 QA 산출물, Git 제외)
-- viewport: 구현 창 560 x 270, 레퍼런스 HUD 영역을 동일 폭 560으로 맞춰 비교
+- reference: 사용자가 제공한 세션 HUD 캡처 (`codex-clipboard-080046d2-668f-4134-9f51-136355b54777.png`)
+- implementation: 로컬 Electron의 `watchpup pet` 창, 말풍선 80% · HUD 70%
+- comparison: `.design-qa/comparison-size-controls.png` (레퍼런스와 구현을 한 이미지로 결합, Git 제외)
+- viewport: 구현 창 401 x 222
 
 ## 확인 결과
 
-- P0: 없음. Claude/Codex 행과 실제 앱 아이콘이 정상 표시됨.
-- P1: 없음. 제목, 상태, 컨텍스트 비율, 경과 시간이 창 밖으로 잘리지 않음.
-- P2: 없음. 어두운 반투명 배경, 1px 테두리, 16px 모서리와 조밀한 행 간격이 레퍼런스의 정보 밀도와 일치함.
-- interaction: 각 행은 버튼으로 노출되며 Codex/Claude 딥링크와 Slack 스레드 이동 경로가 연결됨.
-- regression: HUD가 없으면 기존 340px 펫 창 폭으로 복귀하고, HUD가 있으면 중심점을 유지한 채 560px로 확장됨.
+- P0: 없음. 축소 후에도 Claude/Codex 실제 앱 아이콘과 세션 데이터가 정상 표시됨.
+- P1: 없음. 70% HUD에서 제목, 상태, 컨텍스트 비율, 경과 시간이 창 밖으로 잘리지 않음.
+- P2: 없음. 배경, 테두리, 모서리, 행 높이, 아이콘, 텍스트, 상태 pill이 같은 비율로 축소됨.
+- interaction: 설정 > 펫에서 `말풍선 크기`와 `세션 HUD 크기`를 60~140% 범위로 각각 조절하고 저장할 수 있음.
+- persistence: 말풍선 80%와 HUD 70%를 저장한 뒤 앱을 재실행해 값과 화면 크기가 유지되는 것을 확인함.
+- regression: HUD가 없으면 기존 340px 펫 창 폭으로 복귀하고, HUD가 있으면 설정 비율에 맞춰 창 폭도 함께 변경됨.
 
 final result: passed

@@ -8,6 +8,8 @@ maxConcurrency: 2
 
 # 화면에 표시할 펫 크기(50~200%)
 petSizePercent: 100
+bubbleSizePercent: 100
+hudSizePercent: 100
 
 # 감지 대상 = 나 (필수) — Slack 프로필의 member ID (예: U01ABCDEF)
 mySlackUserId: ""

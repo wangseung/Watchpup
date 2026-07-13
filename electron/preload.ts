@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('watchpup', {
   onPetSize: (cb: (value: unknown) => void) => sub(EVT.petSize, cb),
   onBubbleSize: (cb: (value: unknown) => void) => sub(EVT.bubbleSize, cb),
   onHudSize: (cb: (value: unknown) => void) => sub(EVT.hudSize, cb),
+  onHudVisibility: (cb: (value: unknown) => void) => sub(EVT.hudVisibility, cb),
   petImages: () => ipcRenderer.invoke('pet.images.get'),
   pickPetImageDir: () => ipcRenderer.invoke('pet.pickImageDir'),
   pickObsidianVault: () => ipcRenderer.invoke('obsidian.pickVault'),

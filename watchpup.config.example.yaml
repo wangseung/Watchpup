@@ -10,6 +10,7 @@ maxConcurrency: 2
 petSizePercent: 100
 bubbleSizePercent: 100
 hudSizePercent: 100
+showActivityHud: true
 
 # 감지 대상 = 나 (필수) — Slack 프로필의 member ID (예: U01ABCDEF)
 mySlackUserId: ""

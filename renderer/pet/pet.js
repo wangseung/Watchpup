@@ -19,6 +19,7 @@ let currentState = 'idle'
 let petSizePercent = 100
 let bubbleSizePercent = 100
 let hudSizePercent = 100
+let showActivityHud = true
 
 function imageMode() {
   return Object.keys(images).length > 0
@@ -201,11 +202,22 @@ function setHudSize(value) {
   syncSize()
 }
 
+function updateHudVisibility() {
+  activityHud.classList.toggle('hidden', !showActivityHud || activityList.childElementCount === 0)
+  syncSize()
+}
+
+function setHudVisibility(value) {
+  showActivityHud = value !== false
+  updateHudVisibility()
+}
+
 window.watchpup.settingsGet().then((cfg) => {
   setTheme(cfg?.petTheme)
   setPetSize(cfg?.petSizePercent)
   setBubbleSize(cfg?.bubbleSizePercent)
   setHudSize(cfg?.hudSizePercent)
+  setHudVisibility(cfg?.showActivityHud)
 }).catch(() => {})
 window.watchpup.petImages().then(setImages).catch(() => {})
 window.watchpup.petCodex().then(setCodex).catch(() => {})
@@ -215,6 +227,7 @@ if (window.watchpup.onPetCodex) window.watchpup.onPetCodex(setCodex)
 if (window.watchpup.onPetSize) window.watchpup.onPetSize(setPetSize)
 if (window.watchpup.onBubbleSize) window.watchpup.onBubbleSize(setBubbleSize)
 if (window.watchpup.onHudSize) window.watchpup.onHudSize(setHudSize)
+if (window.watchpup.onHudVisibility) window.watchpup.onHudVisibility(setHudVisibility)
 
 window.watchpup.onPet((s) => {
   currentState = STATES.includes(s) ? s : 'idle'
@@ -300,8 +313,7 @@ function renderActivities(rows) {
     row.addEventListener('click', () => window.watchpup.openActivity(activity.id))
     activityList.append(row)
   }
-  activityHud.classList.toggle('hidden', activityList.childElementCount === 0)
-  syncSize()
+  updateHudVisibility()
 }
 
 window.watchpup.activityList().then(renderActivities).catch(() => {})

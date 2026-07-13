@@ -527,6 +527,7 @@ async function main(): Promise<void> {
     send(pet, EVT.petSize, c.petSizePercent)
     send(pet, EVT.bubbleSize, c.bubbleSizePercent)
     send(pet, EVT.hudSize, c.hudSizePercent)
+    send(pet, EVT.hudVisibility, c.showActivityHud)
     send(pet, EVT.petImages, petImagesFromDir(c.petImageDir))
     send(pet, EVT.petCodex, resolveCodexPet(c.petCodexDir))
     if (pet && !pet.isDestroyed()) pet.setAlwaysOnTop(c.petAlwaysOnTop) // 즉시 반영

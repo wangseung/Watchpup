@@ -1038,6 +1038,7 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); 
 }
 #settings-form input[type="number"] { max-width: 130px; }
 #settings-form .pet-size-field { gap: 9px; }
+#settings-form .pet-size-field.is-disabled { opacity: 0.45; }
 .pet-size-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .pet-size-head output {
   min-width: 48px;

@@ -13,5 +13,7 @@
 - interaction: 설정 > 펫에서 `말풍선 크기`와 `세션 HUD 크기`를 60~140% 범위로 각각 조절하고 저장할 수 있음.
 - persistence: 말풍선 80%와 HUD 70%를 저장한 뒤 앱을 재실행해 값과 화면 크기가 유지되는 것을 확인함.
 - regression: HUD가 없으면 기존 340px 펫 창 폭으로 복귀하고, HUD가 있으면 설정 비율에 맞춰 창 폭도 함께 변경됨.
+- visibility: `세션 HUD 표시`를 끄면 HUD 크기 슬라이더가 비활성화되고 펫만 남음 (`.design-qa/hud-hidden.jpeg`).
+- visibility persistence: 숨김 상태로 앱을 재실행해도 세션 수집은 계속되고 340 x 164 펫 창에서 HUD가 다시 나타나지 않음을 확인함.
 
 final result: passed

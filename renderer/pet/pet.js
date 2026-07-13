@@ -208,7 +208,7 @@ function setHudSize(value) {
   px('--hud-pill-padding-x', 7)
   px('--hud-meta-size', 10, 8)
   px('--hud-elapsed-width', 31)
-  px('--hud-fold-width', 190, 150)
+  px('--hud-badge-size', 38, 30)
   syncSize()
 }
 
@@ -226,10 +226,10 @@ function updateHudFoldControl() {
     folded: hudFolded,
   })
   activityHud.classList.toggle('folded', hudFolded)
-  hudFoldCount.textContent = content.countLabel
+  hudFoldCount.textContent = content.visibleLabel
   hudFoldAction.textContent = content.actionLabel
   hudFold.setAttribute('aria-expanded', String(!hudFolded))
-  hudFold.setAttribute('aria-label', `${content.countLabel}, ${content.actionLabel}`)
+  hudFold.setAttribute('aria-label', `${content.accessibleLabel}, ${content.actionLabel}`)
 }
 
 function setHudFolded(value) {
@@ -304,7 +304,7 @@ function syncSize() {
     const need = petArea + bubbleH + hudH + gaps + PET_CHROME
     // 현재 창이 좁아도 설정값 기준 목표 폭을 계산해야 다시 넓힐 수 있다.
     const expandedHudWidth = Math.ceil(532 * hudSizePercent / 100 + HUD_SAFE_X * 2)
-    const foldedHudWidth = Math.ceil(Math.max(150, 190 * hudSizePercent / 100) + HUD_SAFE_X * 2)
+    const foldedHudWidth = Math.ceil(Math.max(30, 38 * hudSizePercent / 100) + HUD_SAFE_X * 2)
     const hudWidth = hudVisible ? (hudFolded ? foldedHudWidth : expandedHudWidth) : 0
     window.watchpup.petResize({
       width: hudVisible ? Math.max(340, hudWidth) : 340,

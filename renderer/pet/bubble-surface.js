@@ -10,9 +10,11 @@ export function bubbleSurfaceState({ active, showActivityHud, activityCount }) {
 
 export function hudFoldContent({ activityCount, bubbleActive, folded }) {
   const count = Math.max(0, Number(activityCount) || 0) + Number(!!bubbleActive)
+  const accessibleLabel = `항목 ${count}개`
   return {
     count,
-    countLabel: `항목 ${count}개`,
+    visibleLabel: folded ? String(count) : accessibleLabel,
+    accessibleLabel,
     actionLabel: folded ? '펼치기' : '접기',
   }
 }

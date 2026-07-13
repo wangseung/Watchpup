@@ -27,12 +27,16 @@ describe('hudFoldContent', () => {
   it('세션과 활성 메시지를 합친 항목 수를 보여준다', () => {
     expect(hudFoldContent({ activityCount: 5, bubbleActive: true, folded: true })).toEqual({
       count: 6,
-      countLabel: '항목 6개',
+      visibleLabel: '6',
+      accessibleLabel: '항목 6개',
       actionLabel: '펼치기',
     })
   })
 
   it('펼친 상태에서는 접기 액션을 안내한다', () => {
-    expect(hudFoldContent({ activityCount: 3, bubbleActive: false, folded: false }).actionLabel).toBe('접기')
+    expect(hudFoldContent({ activityCount: 3, bubbleActive: false, folded: false })).toMatchObject({
+      visibleLabel: '항목 3개',
+      actionLabel: '접기',
+    })
   })
 })

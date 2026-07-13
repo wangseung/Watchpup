@@ -25,7 +25,7 @@ import { readGlobalMcpCandidates } from './mcp-import.js'
 import { addGithubRepo } from './repos-github.js'
 import { integrationStatus, connectNotion, connectJira, disconnectIntegration } from './integrations.js'
 import { localRelaunchArgs } from '../src/core/watchpup/relaunch.js'
-import { LocalAgentPoller } from '../src/core/activity/session-poller.js'
+import { LocalAgentPoller, type ActivityHistoryRange } from '../src/core/activity/session-poller.js'
 import { mergeActivities, slackActivities } from '../src/core/activity/merge.js'
 import { activityTarget } from './activity-link.js'
 import { resolveWatchpupConfigPath } from '../src/core/config/path.js'
@@ -212,7 +212,13 @@ async function main(): Promise<void> {
     send(win, 'mention.focus', id)
   }
   ipcMain.on('pet.openMention', (_e, id: string) => openMentionPanel(id))
-  ipcMain.handle(CMD.activityList, () => currentActivities())
+  ipcMain.handle(CMD.activityList, (_e, requestedRange?: ActivityHistoryRange) => {
+    const range: ActivityHistoryRange = ['recent', 'today', '7d', 'all'].includes(requestedRange || '')
+      ? requestedRange as ActivityHistoryRange
+      : 'recent'
+    if (range === 'recent') return currentActivities()
+    return agentPoller?.history(range) ?? localActivities
+  })
   ipcMain.on('activity.detail', (_e, id?: string) => {
     const target = typeof id === 'string' ? activityTarget(id) : null
     if (target?.kind === 'mention') openMentionPanel(target.id)

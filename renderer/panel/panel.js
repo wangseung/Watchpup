@@ -29,7 +29,10 @@ const AGENT_STATE_LABEL = { running: '진행 중', done: '완료', waiting: '대
 let agentQuery = ''
 let agentSource = ''
 let agentState = ''
+let agentPeriod = 'today'
 let agentSort = 'newest'
+let agentLoading = false
+let agentRequest = 0
 
 function agentSourceName(source) {
   return source === 'claude' ? 'Claude' : 'Codex'
@@ -54,6 +57,13 @@ function matchesAgentQuery(activity, query) {
 function renderAgentList() {
   if (!agentListEl) return
   agentListEl.replaceChildren()
+  if (agentLoading) {
+    const loading = document.createElement('p')
+    loading.className = 'list-empty'
+    loading.textContent = '세션 기록 불러오는 중…'
+    agentListEl.append(loading)
+    return
+  }
   const query = agentQuery.trim().toLowerCase()
   const rows = state.activities
     .filter((activity) => !agentSource || activity.source === agentSource)
@@ -64,7 +74,7 @@ function renderAgentList() {
   if (!rows.length) {
     const empty = document.createElement('p')
     empty.className = 'list-empty'
-    empty.textContent = state.activities.length ? '조건에 맞는 Agent 세션이 없어요' : '최근 Agent 세션이 없어요'
+    empty.textContent = state.activities.length ? '조건에 맞는 Agent 세션이 없어요' : '선택한 기간에 Agent 세션이 없어요'
     agentListEl.append(empty)
     return
   }
@@ -119,17 +129,42 @@ function selectActivity(id) {
 }
 
 async function refreshActivities() {
-  const rows = await window.watchpup.activityList()
-  state.activities = Array.isArray(rows) ? rows.filter((row) => row?.source === 'codex' || row?.source === 'claude') : []
+  const request = ++agentRequest
+  const range = agentPeriod
+  agentLoading = true
   renderAgentList()
-  if (state.currentActivity) {
-    const activity = state.activities.find((row) => row.id === state.currentActivity)
-    if (activity) renderActivityDetail(activity, agentDetailEl)
-    else {
-      state.currentActivity = null
-      renderAgentEmpty()
+  try {
+    const rows = await window.watchpup.activityList(range)
+    if (request !== agentRequest || range !== agentPeriod) return
+    state.activities = Array.isArray(rows)
+      ? rows.filter((row) => row?.source === 'codex' || row?.source === 'claude')
+      : []
+    if (state.currentActivity) {
+      const activity = state.activities.find((row) => row.id === state.currentActivity)
+      if (activity) renderActivityDetail(activity, agentDetailEl)
+      else {
+        state.currentActivity = null
+        renderAgentEmpty()
+      }
+    }
+  } finally {
+    if (request === agentRequest) {
+      agentLoading = false
+      renderAgentList()
     }
   }
+}
+
+function activityMatchesPeriod(activity) {
+  if (activity?.state === 'running' || agentPeriod === 'all') return true
+  const updatedAt = Number(activity?.updatedAt)
+  if (!Number.isFinite(updatedAt)) return false
+  const now = Date.now()
+  if (agentPeriod === 'recent') return now - updatedAt <= 30 * 60 * 1000
+  if (agentPeriod === '7d') return now - updatedAt <= 7 * 24 * 60 * 60 * 1000
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  return updatedAt >= start.getTime()
 }
 
 
@@ -360,6 +395,7 @@ if (todoOnlyChip) {
 const agentSearchInput = document.getElementById('agent-search-input')
 const agentSourceFilter = document.getElementById('agent-source-filter')
 const agentStateFilter = document.getElementById('agent-state-filter')
+const agentPeriodFilter = document.getElementById('agent-period-filter')
 const agentSortSelect = document.getElementById('agent-sort')
 if (agentSearchInput) {
   agentSearchInput.addEventListener('input', () => {
@@ -377,6 +413,12 @@ if (agentStateFilter) {
   agentStateFilter.addEventListener('change', () => {
     agentState = agentStateFilter.value
     renderAgentList()
+  })
+}
+if (agentPeriodFilter) {
+  agentPeriodFilter.addEventListener('change', () => {
+    agentPeriod = agentPeriodFilter.value
+    refreshActivities().catch(() => {})
   })
 }
 if (agentSortSelect) {
@@ -477,10 +519,17 @@ if (window.watchpup.onActivityFocus) {
 if (window.watchpup.onActivitySessions) {
   window.watchpup.onActivitySessions((rows) => {
     if (!Array.isArray(rows)) return
-    state.activities = rows.filter((row) => row?.source === 'codex' || row?.source === 'claude')
+    const live = rows.filter((row) => row?.source === 'codex' || row?.source === 'claude')
+    if (agentPeriod === 'recent') {
+      state.activities = live
+    } else {
+      const merged = new Map(state.activities.map((row) => [row.id, row]))
+      for (const row of live) merged.set(row.id, row)
+      state.activities = [...merged.values()].filter(activityMatchesPeriod)
+    }
     renderAgentList()
     if (!state.currentActivity) return
-    const activity = rows.find((row) => row?.id === state.currentActivity)
+    const activity = state.activities.find((row) => row?.id === state.currentActivity)
     if (activity) renderActivityDetail(activity, agentDetailEl)
     else {
       state.currentActivity = null
@@ -503,5 +552,4 @@ if (window.watchpup.onMentionFocus) {
 }
 
 refresh()
-refreshActivities().catch(() => {})
 loadPlaybooks()

@@ -23,8 +23,23 @@ import {
 const POLL_MS = 1500
 const INITIAL_HEAD_BYTES = 64 * 1024
 const INITIAL_TAIL_BYTES = 512 * 1024
+const HISTORY_TAIL_BYTES = 96 * 1024
 const DISCOVERY_WINDOW_MS = 30 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
 const UUID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+
+export type ActivityHistoryRange = 'recent' | 'today' | '7d' | 'all'
+
+export function activityHistoryCutoff(range: ActivityHistoryRange, now = Date.now()): number {
+  if (range === 'all') return 0
+  if (range === '7d') return now - 7 * DAY_MS
+  if (range === 'today') {
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    return start.getTime()
+  }
+  return now - DISCOVERY_WINDOW_MS
+}
 
 interface TrackedFile {
   path: string
@@ -38,6 +53,19 @@ interface ClaudeRegistry {
   sessionId: string
   cwd?: string
   name?: string
+}
+
+interface HistoryCandidate {
+  path: string
+  source: 'codex' | 'claude'
+  size: number
+  mtimeMs: number
+}
+
+interface HistoryCacheEntry {
+  size: number
+  mtimeMs: number
+  activity: ActivitySession | null
 }
 
 export interface LocalAgentPollerOptions {
@@ -83,6 +111,7 @@ export class LocalAgentPoller extends EventEmitter {
   private lastSignature = ''
   private codexTitles = new Map<string, string>()
   private lastIndexReadAt = 0
+  private historyCache = new Map<string, HistoryCacheEntry>()
 
   constructor(options: LocalAgentPollerOptions = {}) {
     super()
@@ -138,6 +167,42 @@ export class LocalAgentPoller extends EventEmitter {
     return activities
   }
 
+  async history(range: ActivityHistoryRange): Promise<ActivitySession[]> {
+    if (range === 'recent') return this.scan()
+    const now = this.now()
+    this.readCodexTitles(now)
+    const cutoff = activityHistoryCutoff(range, now)
+    const claudeRegistries = this.readClaudeRegistries()
+    const claudeNames = new Map(claudeRegistries.map((row) => [row.sessionId, row.name]))
+    const candidates = [
+      ...this.discoverCodexHistoryFiles(cutoff),
+      ...this.discoverClaudeHistoryFiles(cutoff),
+    ]
+    const activities: ActivitySession[] = []
+
+    for (const [index, candidate] of candidates.entries()) {
+      if (index > 0 && index % 8 === 0) await new Promise<void>((resolve) => setImmediate(resolve))
+      let cached = this.historyCache.get(candidate.path)
+      if (!cached || cached.size !== candidate.size || cached.mtimeMs !== candidate.mtimeMs) {
+        const sessionId = uuidFromFile(candidate.path)
+        const title = sessionId
+          ? candidate.source === 'codex'
+            ? this.codexTitles.get(sessionId)
+            : claudeNames.get(sessionId)
+          : undefined
+        cached = {
+          size: candidate.size,
+          mtimeMs: candidate.mtimeMs,
+          activity: this.parseHistoryFile(candidate, title, now),
+        }
+        this.historyCache.set(candidate.path, cached)
+      }
+      if (cached.activity) activities.push(cached.activity)
+    }
+
+    return activities.sort((a, b) => b.updatedAt - a.updatedAt)
+  }
+
   private discoverCodexFiles(now: number): string[] {
     const candidates: Array<{ path: string; mtimeMs: number }> = []
     for (let daysAgo = 0; daysAgo <= 1; daysAgo++) {
@@ -153,6 +218,36 @@ export class LocalAgentPoller extends EventEmitter {
       }
     }
     return candidates.sort((a, b) => b.mtimeMs - a.mtimeMs).slice(0, 16).map((row) => row.path)
+  }
+
+  private discoverCodexHistoryFiles(cutoff: number): HistoryCandidate[] {
+    const root = join(this.home, '.codex', 'sessions')
+    const candidates: HistoryCandidate[] = []
+    let years: string[] = []
+    try { years = readdirSync(root) } catch { return [] }
+    for (const year of years) {
+      const yearDir = join(root, year)
+      let months: string[] = []
+      try { months = readdirSync(yearDir) } catch { continue }
+      for (const month of months) {
+        const monthDir = join(yearDir, month)
+        let days: string[] = []
+        try { days = readdirSync(monthDir) } catch { continue }
+        for (const day of days) {
+          const dayDir = join(monthDir, day)
+          let names: string[] = []
+          try { names = readdirSync(dayDir) } catch { continue }
+          for (const name of names) {
+            if (!name.startsWith('rollout-') || !name.endsWith('.jsonl')) continue
+            const path = join(dayDir, name)
+            const stat = safeStat(path)
+            if (!stat || stat.mtimeMs < cutoff) continue
+            candidates.push({ path, source: 'codex', ...stat })
+          }
+        }
+      }
+    }
+    return candidates
   }
 
   private readClaudeRegistries(): ClaudeRegistry[] {
@@ -201,6 +296,62 @@ export class LocalAgentPoller extends EventEmitter {
     }
     for (const row of recent.sort((a, b) => b.mtimeMs - a.mtimeMs).slice(0, 12)) paths.add(row.path)
     return [...paths]
+  }
+
+  private discoverClaudeHistoryFiles(cutoff: number): HistoryCandidate[] {
+    const root = join(this.home, '.claude', 'projects')
+    const candidates: HistoryCandidate[] = []
+    let projects: string[] = []
+    try { projects = readdirSync(root) } catch { return [] }
+    for (const project of projects) {
+      const dir = join(root, project)
+      let names: string[] = []
+      try { names = readdirSync(dir) } catch { continue }
+      for (const name of names) {
+        if (!name.endsWith('.jsonl')) continue
+        const path = join(dir, name)
+        const stat = safeStat(path)
+        if (!stat || stat.mtimeMs < cutoff) continue
+        candidates.push({ path, source: 'claude', ...stat })
+      }
+    }
+    return candidates
+  }
+
+  private parseHistoryFile(
+    candidate: HistoryCandidate,
+    titleOverride: string | undefined,
+    now: number,
+  ): ActivitySession | null {
+    const sessionId = uuidFromFile(candidate.path)
+    if (!sessionId) return null
+    let parsed = newParsedSession(candidate.source, sessionId, candidate.mtimeMs)
+    const apply = (record: unknown): void => {
+      parsed = candidate.source === 'codex'
+        ? applyCodexRecord(parsed, record, now)
+        : applyClaudeRecord(parsed, record, now)
+    }
+
+    const head = this.readRange(candidate.path, 0, Math.min(candidate.size, INITIAL_HEAD_BYTES))
+    const firstLine = head?.split('\n', 1)[0]
+    if (firstLine) {
+      try { apply(JSON.parse(firstLine) as unknown) } catch { /* 손상된 메타는 tail에서 보완 */ }
+    }
+    if (parsed.headless) return null
+
+    const start = Math.max(0, candidate.size - HISTORY_TAIL_BYTES)
+    const tail = this.readRange(candidate.path, start, candidate.size - start)
+    if (tail !== null) {
+      const lines = tail.split('\n')
+      if (start > 0) lines.shift()
+      for (const line of lines) {
+        if (!line.trim()) continue
+        try { apply(JSON.parse(line) as unknown) } catch { /* 손상된 한 줄은 건너뜀 */ }
+      }
+    }
+    if (parsed.headless) return null
+    parsed.updatedAt = Math.max(parsed.updatedAt, candidate.mtimeMs)
+    return activityFromParsed(parsed, titleOverride, now)
   }
 
   private readCodexTitles(now: number): void {

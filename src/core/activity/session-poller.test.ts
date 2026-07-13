@@ -1,8 +1,8 @@
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { LocalAgentPoller } from './session-poller.js'
+import { activityHistoryCutoff, LocalAgentPoller } from './session-poller.js'
 
 const roots: string[] = []
 
@@ -15,6 +15,14 @@ function jsonl(rows: unknown[]): string {
 }
 
 describe('LocalAgentPoller', () => {
+  it('기간별 과거 세션 범위를 계산한다', () => {
+    const now = new Date(2026, 6, 13, 22, 0, 0).getTime()
+    expect(activityHistoryCutoff('recent', now)).toBe(now - 30 * 60 * 1000)
+    expect(activityHistoryCutoff('today', now)).toBe(new Date(2026, 6, 13).getTime())
+    expect(activityHistoryCutoff('7d', now)).toBe(now - 7 * 24 * 60 * 60 * 1000)
+    expect(activityHistoryCutoff('all', now)).toBe(0)
+  })
+
   it('최근 사용자 세션만 읽고 다음 스캔에서는 추가된 로그를 반영한다', () => {
     const home = mkdtempSync(join(tmpdir(), 'watchpup-agent-poller-'))
     roots.push(home)
@@ -73,5 +81,38 @@ describe('LocalAgentPoller', () => {
       { timestamp: now + 1_000, type: 'event_msg', payload: { type: 'task_complete', last_agent_message: '완료' } },
     ]))
     expect(poller.scan().find((row) => row.id === `codex:${codexId}`)).toMatchObject({ state: 'done', detail: '완료' })
+  })
+
+  it('실시간 목록에서 제외된 과거 세션도 기간 조회로 읽는다', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'watchpup-agent-history-'))
+    roots.push(home)
+    const now = new Date(2026, 6, 13, 22, 0, 0).getTime()
+    const old = now - 2 * 24 * 60 * 60 * 1000
+    const date = new Date(old)
+    const codexDir = join(
+      home,
+      '.codex',
+      'sessions',
+      String(date.getFullYear()),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    )
+    mkdirSync(codexDir, { recursive: true })
+    const id = '55555555-5555-4555-8555-555555555555'
+    const path = join(codexDir, `rollout-${id}.jsonl`)
+    writeFileSync(path, jsonl([
+      { timestamp: old, type: 'session_meta', payload: { id, thread_source: 'user', cwd: '/tmp/history' } },
+      { timestamp: old, type: 'event_msg', payload: { type: 'user_message', message: '이전 세션 대화' } },
+      { timestamp: old + 1_000, type: 'event_msg', payload: { type: 'task_complete', last_agent_message: '과거 작업 완료' } },
+    ]))
+    utimesSync(path, old / 1000, old / 1000)
+
+    const poller = new LocalAgentPoller({ homeDir: home, now: () => now })
+    expect(poller.scan()).toEqual([])
+    expect(await poller.history('today')).toEqual([])
+    expect(await poller.history('7d')).toEqual([
+      expect.objectContaining({ id: `codex:${id}`, state: 'done', detail: '과거 작업 완료' }),
+    ])
+    expect(await poller.history('all')).toHaveLength(1)
   })
 })

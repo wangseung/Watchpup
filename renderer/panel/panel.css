@@ -357,6 +357,7 @@ html, body {
 #agent-search-input,
 #agent-source-filter,
 #agent-state-filter,
+#agent-period-filter,
 #agent-sort {
   width: 100%;
   min-width: 0;
@@ -371,6 +372,7 @@ html, body {
 #agent-search-input:focus,
 #agent-source-filter:focus,
 #agent-state-filter:focus,
+#agent-period-filter:focus,
 #agent-sort:focus {
   outline: none;
   border-color: var(--accent);
@@ -379,7 +381,7 @@ html, body {
 #agent-search-input::placeholder { color: var(--fg-faint); }
 .agent-filter-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.9fr;
+  grid-template-columns: 1fr 1fr;
   gap: 5px;
 }
 #agent-list {

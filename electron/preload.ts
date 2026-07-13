@@ -71,7 +71,7 @@ contextBridge.exposeInMainWorld('watchpup', {
   lessonsEdit: (key: string, index: number, text: string) => ipcRenderer.invoke('lessons.edit', { key, index, text }),
   onLessonsChanged: (cb: () => void) => sub('lessons.changed', () => cb()),
   onPetCodex: (cb: (v: unknown) => void) => sub(EVT.petCodex, cb),
-  petResize: (bounds: { width: number; height: number }) => ipcRenderer.send('pet.resize', bounds),
+  petResize: (height: number) => ipcRenderer.send('pet.resize', height),
   onActionStream: (cb: (p: unknown) => void) => sub(EVT.actionStream, cb),
   onActionDone: (cb: (p: unknown) => void) => sub(EVT.actionDone, cb),
   openExternal: (url: string) => ipcRenderer.send('open.external', url),

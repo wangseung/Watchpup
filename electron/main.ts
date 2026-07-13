@@ -324,16 +324,14 @@ async function main(): Promise<void> {
     gateway?.reapplyGroups()
     return c.myGroups
   })
-  // 상태 카드 크기에 맞춰 펫 창을 우하단 기준으로 확장한다.
-  ipcMain.on('pet.resize', (_e, size: { width?: number; height?: number }) => {
-    if (!pet || pet.isDestroyed() || !size || typeof size !== 'object') return
+  // 말풍선 크기에 맞춰 펫 창 높이를 동적으로 (하단 고정 → 위로 확장)
+  ipcMain.on('pet.resize', (_e, height: number) => {
+    if (!pet || pet.isDestroyed() || typeof height !== 'number') return
     const b = pet.getBounds()
-    const w = Math.max(340, Math.min(760, Math.round(size.width ?? b.width)))
-    const h = Math.max(164, Math.min(680, Math.round(size.height ?? b.height)))
-    if (w === b.width && h === b.height) return
-    const right = b.x + b.width
+    const h = Math.max(164, Math.min(680, Math.round(height)))
+    if (h === b.height) return
     const bottom = b.y + b.height
-    pet.setBounds({ x: right - w, y: bottom - h, width: w, height: h })
+    pet.setBounds({ x: b.x, y: bottom - h, width: b.width, height: h })
   })
 
   // 3) 엔진 생성(토큰 불필요) + 이벤트 브리지. 소스(봇/검색)는 아래에서 config·토큰에 따라 부착.

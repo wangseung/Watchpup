@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('watchpup', {
   activityList: () => ipcRenderer.invoke(CMD.activityList),
   onActivitySessions: (cb: (sessions: unknown) => void) => sub(EVT.activitySessions, cb),
   openActivity: (id: string) => ipcRenderer.send('activity.open', id),
+  openActivityDetail: (id?: string) => ipcRenderer.send('activity.detail', id),
   mentionsList: () => ipcRenderer.invoke(CMD.mentionsList),
   mentionGet: (id: string) => ipcRenderer.invoke(CMD.mentionGet, id),
   mentionRead: (id: string) => ipcRenderer.invoke(CMD.mentionRead, id),

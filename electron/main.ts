@@ -151,20 +151,26 @@ async function main(): Promise<void> {
   const tray = new Tray(nativeImage.createEmpty())
   tray.setTitle('🐾')
 
+  function clearPanelBadge(): void {
+    unread = 0
+    state.setBadge(0)
+    send(pet, EVT.pet, 'idle')
+    send(pet, EVT.badge, 0)
+    if (process.platform === 'darwin') app.dock?.setBadge('')
+  }
+
+  function showPanelHome(): void {
+    if (!panel) return
+    if (!panel.isVisible()) panel.show()
+    panel.focus()
+    send(panel, 'panel.shown', {}) // 열 때 항상 멘션 목록부터(직전 설정 탭 잔상 방지)
+    clearPanelBadge()
+  }
+
   function togglePanel(): void {
     if (!panel) return
-    if (panel.isVisible()) {
-      panel.hide()
-    } else {
-      panel.show()
-      panel.focus()
-      send(panel, 'panel.shown', {}) // 열 때 항상 멘션 목록부터(직전 설정 탭 잔상 방지)
-      unread = 0
-      state.setBadge(0)
-      send(pet, EVT.pet, 'idle')
-      send(pet, EVT.badge, 0)
-      if (process.platform === 'darwin') app.dock?.setBadge('')
-    }
+    if (panel.isVisible()) panel.hide()
+    else showPanelHome()
   }
   tray.on('click', () => togglePanel())
 
@@ -175,16 +181,18 @@ async function main(): Promise<void> {
     if (!panel || typeof id !== 'string' || !id) return
     if (!panel.isVisible()) {
       panel.show()
-      unread = 0
-      state.setBadge(0)
-      send(pet, EVT.badge, 0)
-      if (process.platform === 'darwin') app.dock?.setBadge('')
+      clearPanelBadge()
     }
     panel.focus()
     send(panel, 'mention.focus', id)
   }
   ipcMain.on('pet.openMention', (_e, id: string) => openMentionPanel(id))
   ipcMain.handle(CMD.activityList, () => currentActivities())
+  ipcMain.on('activity.detail', (_e, id?: string) => {
+    const target = typeof id === 'string' ? activityTarget(id) : null
+    if (target?.kind === 'mention') openMentionPanel(target.id)
+    else showPanelHome()
+  })
   ipcMain.on('activity.open', (_e, id: string) => {
     const target = activityTarget(id)
     if (!target) return

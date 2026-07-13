@@ -329,11 +329,12 @@ function renderActivities(rows) {
   activityList.replaceChildren()
   for (const activity of activities) {
     if (!activity || !ACTIVITY_ICONS[activity.source]) continue
-    const row = document.createElement('button')
-    row.type = 'button'
+    const row = document.createElement('div')
     row.className = `activity-row state-${activity.state || 'waiting'}`
-    row.title = `${ACTIVITY_NAMES[activity.source]} · ${activity.title || ''}`
-    row.setAttribute('aria-label', `${ACTIVITY_NAMES[activity.source]} 세션 열기: ${activity.title || ''}`)
+    row.tabIndex = 0
+    row.setAttribute('role', 'button')
+    row.title = `Watchpup에서 보기 · ${activity.title || ''}`
+    row.setAttribute('aria-label', `Watchpup에서 상세 보기: ${activity.title || ''}`)
 
     const dot = document.createElement('span')
     dot.className = 'activity-dot'
@@ -358,8 +359,25 @@ function renderActivities(rows) {
     const elapsed = document.createElement('span')
     elapsed.className = 'activity-elapsed'
     elapsed.textContent = formatElapsed(activity.updatedAt)
-    row.append(elapsed)
-    row.addEventListener('click', () => window.watchpup.openActivity(activity.id))
+    const open = document.createElement('button')
+    open.type = 'button'
+    open.className = 'activity-open'
+    open.textContent = '열기'
+    open.disabled = activity.canOpen === false
+    const directTarget = activity.source === 'slack' ? 'Slack 스레드' : `${ACTIVITY_NAMES[activity.source]} 세션`
+    open.title = open.disabled ? '직접 열 수 없는 항목입니다' : `${directTarget}으로 이동`
+    open.setAttribute('aria-label', open.title)
+    open.addEventListener('click', (event) => {
+      event.stopPropagation()
+      window.watchpup.openActivity(activity.id)
+    })
+    row.append(elapsed, open)
+    row.addEventListener('click', () => window.watchpup.openActivityDetail(activity.id))
+    row.addEventListener('keydown', (event) => {
+      if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return
+      event.preventDefault()
+      window.watchpup.openActivityDetail(activity.id)
+    })
     activityList.append(row)
   }
   updateHudFoldControl()
@@ -449,6 +467,9 @@ bubble.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false
 bubble.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
 activityHud.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))
 activityHud.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
+activityHud.addEventListener('click', (event) => {
+  if (event.target === activityHud || event.target === activityList) window.watchpup.openActivityDetail()
+})
 // 말풍선/HUD 상태 줄 클릭 → 스레드가 연결돼 있으면 그 스레드를 열고, 아니면 패널 토글
 function openBubbleTarget() {
   if (bubbleMentionId) window.watchpup.openMention(bubbleMentionId)

@@ -167,7 +167,7 @@ body.hud-align-right { align-items: flex-end; }
   width: 100%;
   height: var(--hud-row-height);
   display: grid;
-  grid-template-columns: var(--hud-dot-column) var(--hud-icon-column) minmax(0, 1fr) auto auto auto;
+  grid-template-columns: var(--hud-dot-column) var(--hud-icon-column) minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: var(--hud-row-gap);
   padding: 0 var(--hud-row-padding);
@@ -223,12 +223,29 @@ body.hud-align-right { align-items: flex-end; }
 .state-error .activity-state { color: #ffaaaa; background: rgba(255, 107, 107, 0.1); }
 .activity-context { color: #a8c8f3; }
 .activity-elapsed {
+  grid-column: 6;
   min-width: var(--hud-elapsed-width);
   color: rgba(245, 245, 247, 0.48);
   font-size: var(--hud-meta-size);
   text-align: right;
   white-space: nowrap;
 }
+.activity-open {
+  grid-column: 7;
+  height: calc(var(--hud-icon-size) + 2px);
+  padding: 0 var(--hud-pill-padding-x);
+  border: 1px solid rgba(168, 200, 243, 0.26);
+  border-radius: 999px;
+  background: rgba(83, 155, 245, 0.1);
+  color: #b9d5f7;
+  font: 650 var(--hud-meta-size)/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.activity-open:hover { background: rgba(83, 155, 245, 0.2); color: #e0edfc; }
+.activity-open:active { background: rgba(83, 155, 245, 0.28); }
+.activity-open:focus-visible { outline: 2px solid rgba(83, 155, 245, 0.9); outline-offset: 1px; }
+.activity-open:disabled { opacity: 0.4; cursor: default; }
 
 /* ---- 말풍선 ---- */
 .bubble {

@@ -22,7 +22,7 @@ export function slackActivities(mentions: Mention[], now = Date.now()): Activity
         detail: [channel, author].filter(Boolean).join(' · '),
         state,
         updatedAt: mention.mentionedAt,
-        canOpen: true,
+        canOpen: Boolean(mention.permalink),
       } satisfies ActivitySession
     })
 }

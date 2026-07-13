@@ -11,9 +11,13 @@ function mention(patch: Partial<Mention> = {}): Mention {
 
 describe('activity merge', () => {
   it('Slack 멘션을 출처가 있는 HUD 세션으로 변환한다', () => {
-    expect(slackActivities([mention()], 11_000)[0]).toMatchObject({
-      id: 'slack:m1', source: 'slack', title: '이 스레드 확인해줘', detail: '#ios · Jack', state: 'done',
+    expect(slackActivities([mention({ permalink: 'https://example.slack.com/archives/C1/p1' })], 11_000)[0]).toMatchObject({
+      id: 'slack:m1', source: 'slack', title: '이 스레드 확인해줘', detail: '#ios · Jack', state: 'done', canOpen: true,
     })
+  })
+
+  it('permalink가 없는 Slack 항목은 원본 이동을 비활성화한다', () => {
+    expect(slackActivities([mention()], 11_000)[0]?.canOpen).toBe(false)
   })
 
   it('최신 활동 순으로 Claude, Codex, Slack을 합친다', () => {

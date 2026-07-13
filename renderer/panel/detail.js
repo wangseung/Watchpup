@@ -139,10 +139,10 @@ function renderDetail(m) {
   attachSplitter(panes, left, right, divider)
 }
 
-function renderActivityDetail(activity) {
-  detailEl.replaceChildren()
+function renderActivityDetail(activity, targetEl = detailEl) {
+  targetEl.replaceChildren()
   const sourceName = activity.source === 'claude' ? 'Claude' : 'Codex'
-  const stateLabels = { running: '작업 중', done: '완료', waiting: '대기', error: '오류' }
+  const stateLabels = { running: '진행 중', done: '완료', waiting: '대기', error: '오류' }
 
   const head = document.createElement('div')
   head.className = 'detail-head agent-detail-head'
@@ -176,7 +176,7 @@ function renderActivityDetail(activity) {
   parts.push(`세션 ${activity.sessionId || ''}`)
   meta.textContent = parts.filter(Boolean).join(' · ')
   head.append(meta)
-  detailEl.append(head)
+  targetEl.append(head)
 
   const body = document.createElement('div')
   body.className = 'agent-session-body'
@@ -218,7 +218,7 @@ function renderActivityDetail(activity) {
     summary.textContent = activity.detail || '아직 표시할 대화 내용이 없습니다.'
     body.append(summary)
   }
-  detailEl.append(body)
+  targetEl.append(body)
 }
 
 // 좌우 비율(스레드:watchpup) 저장·복원 + 드래그 리사이즈

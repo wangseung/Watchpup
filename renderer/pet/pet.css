@@ -232,16 +232,29 @@ body.hud-align-right { align-items: flex-end; }
 }
 .activity-open {
   grid-column: 7;
+  width: calc(var(--hud-icon-size) + 2px);
   height: calc(var(--hud-icon-size) + 2px);
-  padding: 0 var(--hud-pill-padding-x);
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid rgba(168, 200, 243, 0.26);
   border-radius: 999px;
   background: rgba(83, 155, 245, 0.1);
   color: #b9d5f7;
-  font: 650 var(--hud-meta-size)/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  white-space: nowrap;
   cursor: pointer;
 }
+.activity-open svg {
+  width: max(11px, calc(var(--hud-icon-size) * 0.58));
+  height: max(11px, calc(var(--hud-icon-size) * 0.58));
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.activity-open[hidden] { display: none; }
 .activity-open:hover { background: rgba(83, 155, 245, 0.2); color: #e0edfc; }
 .activity-open:active { background: rgba(83, 155, 245, 0.28); }
 .activity-open:focus-visible { outline: 2px solid rgba(83, 155, 245, 0.9); outline-offset: 1px; }

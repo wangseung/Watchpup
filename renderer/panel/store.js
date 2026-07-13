@@ -3,6 +3,7 @@
 
 export const state = {
   mentions: new Map(),       // id → Mention (refresh 때 새 Map으로 교체)
+  activities: [],            // Claude/Codex 로컬 세션 목록
   current: null,             // 선택된 mentionId
   currentActivity: null,     // 선택된 Claude/Codex activityId
   chats: new Map(),          // id → { messages } (mentions 교체와 무관하게 보존)

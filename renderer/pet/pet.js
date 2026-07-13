@@ -4,6 +4,10 @@ const petSprite = document.getElementById('pet-sprite')
 const face = pet.querySelector('.face')
 const badge = document.getElementById('badge')
 const bubble = document.getElementById('bubble')
+const bubbleTitle = document.getElementById('bubble-title')
+const bubbleDetail = document.getElementById('bubble-detail')
+const bubbleSpinner = document.getElementById('bubble-spinner')
+const bubbleToggle = document.getElementById('bubble-toggle')
 const STATES = ['idle', 'thinking', 'ready', 'chatting']
 
 // ---- 테마(글리프) / 커스텀 이미지 / Codex Pet 팩 ----
@@ -181,18 +185,18 @@ window.watchpup.onBadge((n) => {
   }
 })
 
-// ---- 말풍선 + 다이나믹 창 크기 ----
-// 말풍선 내용에 맞춰 펫 창 높이를 조절(하단 고정 → 위로 확장). main의 pet.resize가 처리.
+// ---- 상태 카드 + 다이나믹 창 크기 ----
 const BASE_PET_AREA = 128 // 펫 영역 높이(이미지/코덱스 스프라이트 최대) 근사
-// 상단패딩(10) + 스프라이트(128) + 하단패딩(12) + 그림자/발 여유(14) — 코덱스 스프라이트가 잘리지 않도록 여유 확보
 const PET_CHROME = 10 + 12 + 14
+const COMPACT_WIDTH = 340
+const CARD_WIDTH = 740
 function syncSize() {
   requestAnimationFrame(() => {
     const visible = !bubble.classList.contains('hidden')
     const bubbleH = visible ? bubble.getBoundingClientRect().height : 0
     const petArea = BASE_PET_AREA * petSizePercent / 100
-    const need = petArea + (visible ? bubbleH + 19 : 0) + PET_CHROME
-    window.watchpup.petResize(Math.ceil(need))
+    const need = petArea + (visible ? bubbleH + 10 : 0) + PET_CHROME
+    window.watchpup.petResize({ width: visible ? CARD_WIDTH : COMPACT_WIDTH, height: Math.ceil(need) })
   })
 }
 
@@ -200,15 +204,40 @@ let bubbleTimer = null
 let chatStreaming = false
 let chatBuf = ''
 
+function cleanLine(text) {
+  return text.replace(/^[^\p{L}\p{N}“'"(]+/u, '').trim()
+}
+
+function cardCopy(text) {
+  const lines = text.split('\n').map((line) => cleanLine(line)).filter(Boolean)
+  if (lines.length > 1) return { title: lines[0], detail: lines.slice(1).join(' ') }
+  if (currentState === 'thinking') return { title: lines[0] || 'Slack 스레드 확인 중', detail: '새로운 내용을 분석하고 있어요' }
+  if (currentState === 'chatting') return { title: 'Watchpup 답변 작성 중', detail: lines[0] || '요청을 처리하고 있어요' }
+  return { title: lines[0] || 'Watchpup', detail: '눌러서 자세히 보기' }
+}
+
+function renderCard(text) {
+  const copy = cardCopy(text)
+  bubbleTitle.textContent = copy.title
+  bubbleDetail.textContent = copy.detail
+  bubbleSpinner.classList.toggle('hidden', !(currentState === 'thinking' || currentState === 'chatting' || chatStreaming))
+}
+
+function hideBubble() {
+  bubble.classList.add('hidden')
+  bubbleToggle.classList.add('hidden')
+  syncSize()
+}
+
 function showBubble(text, hideAfterMs) {
-  bubble.textContent = text
+  renderCard(text)
   bubble.classList.remove('hidden')
+  bubbleToggle.classList.remove('hidden')
   syncSize()
   if (bubbleTimer) clearTimeout(bubbleTimer)
   if (hideAfterMs) {
     bubbleTimer = setTimeout(() => {
-      bubble.classList.add('hidden')
-      syncSize()
+      hideBubble()
     }, hideAfterMs)
   }
 }
@@ -241,12 +270,10 @@ window.watchpup.onChatBubble((ev) => {
     chatStreaming = true
     chatBuf += ev.text || ''
     showBubble(chatBuf || '…', null)
-    bubble.scrollTop = bubble.scrollHeight
   } else if (type === 'result') {
     chatStreaming = false
     bubble.classList.remove('streaming')
     showBubble(ev.text || chatBuf || '(빈 응답)', 20000)
-    bubble.scrollTop = bubble.scrollHeight
   } else if (type === 'error') {
     chatStreaming = false
     bubble.classList.remove('streaming')
@@ -260,8 +287,14 @@ bubble.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true)
 bubble.addEventListener('click', () => {
   if (bubbleMentionId) window.watchpup.openMention(bubbleMentionId)
   else window.watchpup.togglePanel()
-  bubble.classList.add('hidden')
-  syncSize()
+  hideBubble()
+})
+
+bubbleToggle.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))
+bubbleToggle.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
+bubbleToggle.addEventListener('click', (event) => {
+  event.stopPropagation()
+  hideBubble()
 })
 
 // ---- click-through 토글 (몸통 위에서만 상호작용) ----

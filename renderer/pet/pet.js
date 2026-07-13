@@ -505,8 +505,14 @@ hudMessage.addEventListener('click', openBubbleTarget)
 hudFold.addEventListener('click', () => setHudFolded(!hudFolded))
 
 // ---- click-through 토글 (몸통 위에서만 상호작용) ----
-pet.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))
-pet.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
+pet.addEventListener('mouseenter', () => {
+  window.watchpup.setPanelActivationGuard(true)
+  window.watchpup.setMouseIgnore(false)
+})
+pet.addEventListener('mouseleave', () => {
+  window.watchpup.setPanelActivationGuard(false)
+  window.watchpup.setMouseIgnore(true)
+})
 
 // ---- 드래그 이동 vs 클릭 구분 ----
 let down = false

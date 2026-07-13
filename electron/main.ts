@@ -348,7 +348,7 @@ async function main(): Promise<void> {
     return c.myGroups
   })
   // 말풍선 크기에 맞춰 펫 창 높이를 동적으로 (하단 고정 → 위로 확장)
-  ipcMain.on('pet.resize', (_e, value: number | { width?: number; height?: number }) => {
+  ipcMain.on('pet.resize', (_e, value: number | { width?: number; height?: number; anchor?: 'left' | 'right' }) => {
     if (!pet || pet.isDestroyed()) return
     const b = pet.getBounds()
     const requestedHeight = typeof value === 'number' ? value : value?.height
@@ -358,9 +358,11 @@ async function main(): Promise<void> {
     const w = Math.max(340, Math.min(620, Math.round(requestedWidth)))
     if (h === b.height && w === b.width) return
     const bottom = b.y + b.height
-    const centerX = b.x + b.width / 2
     const workArea = screen.getDisplayMatching(b).workArea
-    const x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - w, Math.round(centerX - w / 2)))
+    const requestedX = typeof value === 'object' && value?.anchor === 'left'
+      ? b.x
+      : b.x + b.width - w
+    const x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - w, Math.round(requestedX)))
     const y = Math.max(workArea.y, bottom - h)
     pet.setBounds({ x, y, width: w, height: h })
   })
@@ -527,6 +529,7 @@ async function main(): Promise<void> {
     send(pet, EVT.petSize, c.petSizePercent)
     send(pet, EVT.bubbleSize, c.bubbleSizePercent)
     send(pet, EVT.hudSize, c.hudSizePercent)
+    send(pet, EVT.hudAlignment, c.hudAlignment)
     send(pet, EVT.hudVisibility, c.showActivityHud)
     send(pet, EVT.petImages, petImagesFromDir(c.petImageDir))
     send(pet, EVT.petCodex, resolveCodexPet(c.petCodexDir))

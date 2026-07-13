@@ -49,12 +49,15 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: 12px;
   padding: 10px 14px 12px;
   box-sizing: border-box;
 }
+
+body.hud-align-left { align-items: flex-start; }
+body.hud-align-right { align-items: flex-end; }
 
 /* ---- 최근 Claude / Codex / Slack 활동 ---- */
 .activity-hud {
@@ -211,7 +214,6 @@ body {
 
 /* ---- 말풍선 ---- */
 .bubble {
-  align-self: center;
   width: fit-content;
   max-width: min(var(--bubble-max-width), 100%);
   box-sizing: border-box;

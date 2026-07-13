@@ -115,6 +115,8 @@ const hudSizeInput = settingsForm.elements['hudSizePercent']
 const hudSizeValue = document.getElementById('hud-size-value')
 const showActivityHudInput = settingsForm.elements['showActivityHud']
 const hudSizeField = document.getElementById('hud-size-field')
+const hudAlignmentInput = settingsForm.elements['hudAlignment']
+const hudAlignmentField = document.getElementById('hud-alignment-field')
 
 function updatePetSizeLabel() {
   if (petSizeInput && petSizeValue) petSizeValue.textContent = `${petSizeInput.value}%`
@@ -131,7 +133,9 @@ function updateHudSizeLabel() {
 function updateHudControls() {
   const enabled = showActivityHudInput?.checked !== false
   if (hudSizeInput) hudSizeInput.disabled = !enabled
+  if (hudAlignmentInput) hudAlignmentInput.disabled = !enabled
   if (hudSizeField) hudSizeField.classList.toggle('is-disabled', !enabled)
+  if (hudAlignmentField) hudAlignmentField.classList.toggle('is-disabled', !enabled)
 }
 
 if (petSizeInput) petSizeInput.addEventListener('input', updatePetSizeLabel)
@@ -148,6 +152,7 @@ async function loadSettings() {
   if (petSizeInput) petSizeInput.value = String(cfg.petSizePercent ?? 100)
   if (bubbleSizeInput) bubbleSizeInput.value = String(cfg.bubbleSizePercent ?? 100)
   if (hudSizeInput) hudSizeInput.value = String(cfg.hudSizePercent ?? 100)
+  if (hudAlignmentInput) hudAlignmentInput.value = cfg.hudAlignment === 'left' ? 'left' : 'right'
   if (showActivityHudInput) showActivityHudInput.checked = cfg.showActivityHud !== false
   updatePetSizeLabel()
   updateBubbleSizeLabel()
@@ -524,6 +529,7 @@ settingsForm.addEventListener('submit', async (e) => {
     petSizePercent: petSizeInput ? parseInt(petSizeInput.value, 10) : 100,
     bubbleSizePercent: bubbleSizeInput ? parseInt(bubbleSizeInput.value, 10) : 100,
     hudSizePercent: hudSizeInput ? parseInt(hudSizeInput.value, 10) : 100,
+    hudAlignment: hudAlignmentInput?.value === 'left' ? 'left' : 'right',
     showActivityHud: showActivityHudInput ? showActivityHudInput.checked : true,
     persona: settingsForm.elements['persona'] ? settingsForm.elements['persona'].value.trim() : '',
     bubbleStyle: settingsForm.elements['bubbleStyle'] ? settingsForm.elements['bubbleStyle'].value : 'status',

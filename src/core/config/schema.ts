@@ -79,6 +79,8 @@ export const watchpupConfigSchema = z.object({
   bubbleSizePercent: z.number().int().min(60).max(140).default(100),
   // 펫 아래에 표시되는 Claude/Codex/Slack 세션 HUD 크기(%).
   hudSizePercent: z.number().int().min(60).max(140).default(100),
+  // 펫·말풍선·HUD가 공유하는 가로 기준선. 화면 오른쪽 배치를 고려해 오른쪽이 기본.
+  hudAlignment: z.enum(['left', 'right']).default('right'),
   // 세션 HUD를 화면에 표시할지. 수집은 이 값과 무관하게 계속된다.
   showActivityHud: z.boolean().default(true),
   // 커스텀 펫 이미지 폴더(설정 시 이모지 대신 이미지 사용, 공모양 배경 제거).

@@ -33,6 +33,7 @@ export const EVT = {
   petSize: 'pet.size',
   bubbleSize: 'bubble.size',
   hudSize: 'hud.size',
+  hudAlignment: 'hud.alignment',
   hudVisibility: 'hud.visibility',
   actionStream: 'action.stream',
   actionDone: 'action.done',
@@ -83,6 +84,7 @@ export interface SettingsPatch {
   petSizePercent?: number
   bubbleSizePercent?: number
   hudSizePercent?: number
+  hudAlignment?: 'left' | 'right'
   showActivityHud?: boolean
   petImageDir?: string
   petCodexDir?: string

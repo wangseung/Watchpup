@@ -25,6 +25,7 @@ let currentState = 'idle'
 let petSizePercent = 100
 let bubbleSizePercent = 100
 let hudSizePercent = 100
+let hudAlignment = 'right'
 let showActivityHud = true
 let bubbleActive = false
 let hudFolded = localStorage.getItem('watchpup.hudFolded') === '1'
@@ -211,6 +212,13 @@ function setHudSize(value) {
   syncSize()
 }
 
+function setHudAlignment(value) {
+  hudAlignment = value === 'left' ? 'left' : 'right'
+  document.body.classList.toggle('hud-align-left', hudAlignment === 'left')
+  document.body.classList.toggle('hud-align-right', hudAlignment === 'right')
+  syncSize()
+}
+
 function updateHudFoldControl() {
   const content = hudFoldContent({
     activityCount: activityList.childElementCount,
@@ -247,6 +255,7 @@ window.watchpup.settingsGet().then((cfg) => {
   setPetSize(cfg?.petSizePercent)
   setBubbleSize(cfg?.bubbleSizePercent)
   setHudSize(cfg?.hudSizePercent)
+  setHudAlignment(cfg?.hudAlignment)
   setHudVisibility(cfg?.showActivityHud)
 }).catch(() => {})
 window.watchpup.petImages().then(setImages).catch(() => {})
@@ -257,6 +266,7 @@ if (window.watchpup.onPetCodex) window.watchpup.onPetCodex(setCodex)
 if (window.watchpup.onPetSize) window.watchpup.onPetSize(setPetSize)
 if (window.watchpup.onBubbleSize) window.watchpup.onBubbleSize(setBubbleSize)
 if (window.watchpup.onHudSize) window.watchpup.onHudSize(setHudSize)
+if (window.watchpup.onHudAlignment) window.watchpup.onHudAlignment(setHudAlignment)
 if (window.watchpup.onHudVisibility) window.watchpup.onHudVisibility(setHudVisibility)
 
 window.watchpup.onPet((s) => {
@@ -295,7 +305,11 @@ function syncSize() {
     const expandedHudWidth = Math.ceil(532 * hudSizePercent / 100 + 28)
     const foldedHudWidth = Math.ceil(Math.max(150, 190 * hudSizePercent / 100) + 28)
     const hudWidth = hudVisible ? (hudFolded ? foldedHudWidth : expandedHudWidth) : 0
-    window.watchpup.petResize({ width: hudVisible ? Math.max(340, hudWidth) : 340, height: Math.ceil(need) })
+    window.watchpup.petResize({
+      width: hudVisible ? Math.max(340, hudWidth) : 340,
+      height: Math.ceil(need),
+      anchor: hudAlignment,
+    })
   })
 }
 

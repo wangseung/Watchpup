@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
 
 describe('bubbleSurfaceState', () => {
-  it('말풍선 내용을 HUD가 켜진 동안 HUD에 통합한다', () => {
+  it('HUD가 켜져 있어도 임시 메시지는 독립 말풍선으로 표시한다', () => {
     expect(bubbleSurfaceState({ active: true, showActivityHud: true, activityCount: 3 })).toEqual({
-      bubbleVisible: false,
-      hudMessageVisible: true,
+      bubbleVisible: true,
+      hudMessageVisible: false,
       hudVisible: true,
     })
   })
@@ -18,17 +18,21 @@ describe('bubbleSurfaceState', () => {
     })
   })
 
-  it('활동이 없어도 활성 메시지가 있으면 HUD를 표시한다', () => {
-    expect(bubbleSurfaceState({ active: true, showActivityHud: true, activityCount: 0 }).hudVisible).toBe(true)
+  it('활동이 없으면 말풍선만 표시하고 빈 HUD는 숨긴다', () => {
+    expect(bubbleSurfaceState({ active: true, showActivityHud: true, activityCount: 0 })).toEqual({
+      bubbleVisible: true,
+      hudMessageVisible: false,
+      hudVisible: false,
+    })
   })
 })
 
 describe('hudFoldContent', () => {
-  it('세션과 활성 메시지를 합친 항목 수를 보여준다', () => {
-    expect(hudFoldContent({ activityCount: 5, bubbleActive: true, folded: true })).toEqual({
-      count: 6,
-      visibleLabel: '6',
-      accessibleLabel: '항목 6개',
+  it('세션 항목 수만 보여준다', () => {
+    expect(hudFoldContent({ activityCount: 5, folded: true })).toEqual({
+      count: 5,
+      visibleLabel: '5',
+      accessibleLabel: '항목 5개',
       actionLabel: '펼치기',
     })
   })

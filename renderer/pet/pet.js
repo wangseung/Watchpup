@@ -222,7 +222,6 @@ function setHudAlignment(value) {
 function updateHudFoldControl() {
   const content = hudFoldContent({
     activityCount: activityList.childElementCount,
-    bubbleActive,
     folded: hudFolded,
   })
   activityHud.classList.toggle('folded', hudFolded)

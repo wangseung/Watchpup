@@ -1,5 +1,5 @@
 import { activityStateLabel, formatElapsed } from './activity-format.js'
-import { bubbleSurfaceState } from './bubble-surface.js'
+import { bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
 
 const pet = document.getElementById('pet')
 const petImg = document.getElementById('pet-img')
@@ -8,6 +8,9 @@ const face = pet.querySelector('.face')
 const badge = document.getElementById('badge')
 const bubble = document.getElementById('bubble')
 const activityHud = document.getElementById('activity-hud')
+const hudFold = document.getElementById('hud-fold')
+const hudFoldCount = document.getElementById('hud-fold-count')
+const hudFoldAction = document.getElementById('hud-fold-action')
 const hudMessage = document.getElementById('hud-message')
 const hudMessageText = document.getElementById('hud-message-text')
 const activityList = document.getElementById('activity-list')
@@ -24,6 +27,7 @@ let bubbleSizePercent = 100
 let hudSizePercent = 100
 let showActivityHud = true
 let bubbleActive = false
+let hudFolded = localStorage.getItem('watchpup.hudFolded') === '1'
 
 function imageMode() {
   return Object.keys(images).length > 0
@@ -203,6 +207,27 @@ function setHudSize(value) {
   px('--hud-pill-padding-x', 7)
   px('--hud-meta-size', 10, 8)
   px('--hud-elapsed-width', 31)
+  px('--hud-fold-width', 190, 150)
+  syncSize()
+}
+
+function updateHudFoldControl() {
+  const content = hudFoldContent({
+    activityCount: activityList.childElementCount,
+    bubbleActive,
+    folded: hudFolded,
+  })
+  activityHud.classList.toggle('folded', hudFolded)
+  hudFoldCount.textContent = content.countLabel
+  hudFoldAction.textContent = content.actionLabel
+  hudFold.setAttribute('aria-expanded', String(!hudFolded))
+  hudFold.setAttribute('aria-label', `${content.countLabel}, ${content.actionLabel}`)
+}
+
+function setHudFolded(value) {
+  hudFolded = !!value
+  localStorage.setItem('watchpup.hudFolded', hudFolded ? '1' : '0')
+  updateHudFoldControl()
   syncSize()
 }
 
@@ -267,7 +292,9 @@ function syncSize() {
     const gaps = Math.max(0, visibleBlocks - 1) * 12
     const need = petArea + bubbleH + hudH + gaps + PET_CHROME
     // 현재 창이 좁아도 설정값 기준 목표 폭을 계산해야 다시 넓힐 수 있다.
-    const hudWidth = hudVisible ? Math.ceil(532 * hudSizePercent / 100 + 28) : 0
+    const expandedHudWidth = Math.ceil(532 * hudSizePercent / 100 + 28)
+    const foldedHudWidth = Math.ceil(Math.max(150, 190 * hudSizePercent / 100) + 28)
+    const hudWidth = hudVisible ? (hudFolded ? foldedHudWidth : expandedHudWidth) : 0
     window.watchpup.petResize({ width: hudVisible ? Math.max(340, hudWidth) : 340, height: Math.ceil(need) })
   })
 }
@@ -318,6 +345,7 @@ function renderActivities(rows) {
     row.addEventListener('click', () => window.watchpup.openActivity(activity.id))
     activityList.append(row)
   }
+  updateHudFoldControl()
   updateHudVisibility()
 }
 
@@ -333,6 +361,7 @@ function renderBubbleSurface() {
   const state = bubbleSurfaceState({ active: bubbleActive, showActivityHud, activityCount: activityList.childElementCount })
   bubble.classList.toggle('hidden', !state.bubbleVisible)
   hudMessage.classList.toggle('hidden', !state.hudMessageVisible)
+  updateHudFoldControl()
   updateHudVisibility()
 }
 
@@ -411,6 +440,7 @@ function openBubbleTarget() {
 }
 bubble.addEventListener('click', openBubbleTarget)
 hudMessage.addEventListener('click', openBubbleTarget)
+hudFold.addEventListener('click', () => setHudFolded(!hudFolded))
 
 // ---- click-through 토글 (몸통 위에서만 상호작용) ----
 pet.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))

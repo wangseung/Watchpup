@@ -17,5 +17,6 @@
 - visibility persistence: 숨김 상태로 앱을 재실행해도 세션 수집은 계속되고 340 x 164 펫 창에서 HUD가 다시 나타나지 않음을 확인함.
 - message integration: HUD가 켜져 있으면 기존 말풍선 내용이 HUD 최상단의 최대 2줄 상태 영역에 표시되고, 별도 말풍선은 중복 노출되지 않음.
 - message fallback: HUD를 숨기면 같은 내용이 기존 말풍선으로 자동 복귀하며, 두 표면 모두 클릭 시 동일한 스레드/패널을 엶.
+- folding: HUD 상단의 `접기`를 누르면 목록과 메시지가 사라지고 `항목 N개 · 펼치기` 바만 남으며, 접힘 상태는 재실행 후에도 유지됨.
 
 final result: passed

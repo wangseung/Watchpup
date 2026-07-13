@@ -28,6 +28,7 @@
   --hud-pill-padding-x: 7px;
   --hud-meta-size: 10px;
   --hud-elapsed-width: 31px;
+  --hud-fold-width: 190px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -71,6 +72,30 @@ body {
   pointer-events: auto;
 }
 .activity-hud.hidden { display: none; }
+.activity-hud.folded { width: min(var(--hud-fold-width), 100%); }
+.hud-fold {
+  width: 100%;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 2px;
+  padding: 2px var(--hud-row-padding);
+  border: 0;
+  border-radius: var(--hud-row-radius);
+  background: transparent;
+  color: rgba(245, 245, 247, 0.7);
+  font: 650 var(--hud-meta-size)/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  cursor: pointer;
+}
+.hud-fold:hover { background: rgba(255, 255, 255, 0.08); color: #f5f5f7; }
+.hud-fold:active { background: rgba(255, 255, 255, 0.12); }
+.hud-fold:focus-visible { outline: 2px solid rgba(83, 155, 245, 0.9); outline-offset: -2px; }
+.hud-fold-action { color: #a8c8f3; }
+.activity-hud.folded .hud-fold { margin-bottom: 0; }
+.activity-hud.folded .hud-message,
+.activity-hud.folded .activity-list { display: none; }
 .hud-message {
   width: 100%;
   min-height: var(--hud-row-height);

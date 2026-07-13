@@ -36,9 +36,14 @@ let gateway: WatchpupGateway | null = null
 let agentPoller: LocalAgentPoller | null = null
 let unread = 0
 let lastActivity = Date.now()
+let isQuitting = false
 
 function send(win: BrowserWindow | null, channel: string, payload: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
+}
+
+function activePanel(): BrowserWindow | null {
+  return panel && !panel.isDestroyed() ? panel : null
 }
 
 // 멘션/채팅/액션 이벤트는 (단일 마스터-디테일) 패널로 보낸다.
@@ -111,6 +116,11 @@ async function main(): Promise<void> {
   // 2) 창 + 트레이 생성
   pet = createPetWindow(config.petAlwaysOnTop)
   panel = createPanelWindow(state.getWindowBounds('panel'))
+  panel.on('close', (event) => {
+    if (isQuitting) return
+    event.preventDefault()
+    activePanel()?.hide()
+  })
 
 
   rememberBounds(panel, 'panel')
@@ -164,25 +174,28 @@ async function main(): Promise<void> {
   }
 
   function showPanelHome(): void {
-    if (!panel) return
-    if (!panel.isVisible()) panel.show()
-    panel.focus()
-    send(panel, 'panel.shown', {}) // 열 때 항상 멘션 목록부터(직전 설정 탭 잔상 방지)
+    const win = activePanel()
+    if (!win) return
+    if (!win.isVisible()) win.show()
+    win.focus()
+    send(win, 'panel.shown', {}) // 열 때 항상 멘션 목록부터(직전 설정 탭 잔상 방지)
     clearPanelBadge()
   }
 
   function togglePanel(): void {
-    if (!panel) return
-    if (panel.isVisible()) panel.hide()
+    const win = activePanel()
+    if (!win) return
+    if (win.isVisible()) win.hide()
     else showPanelHome()
   }
 
   function openActivityPanel(id: string): void {
-    if (!panel) return
-    if (!panel.isVisible()) panel.show()
-    panel.focus()
+    const win = activePanel()
+    if (!win) return
+    if (!win.isVisible()) win.show()
+    win.focus()
     clearPanelBadge()
-    send(panel, 'activity.focus', id)
+    send(win, 'activity.focus', id)
   }
   tray.on('click', () => togglePanel())
 
@@ -190,13 +203,14 @@ async function main(): Promise<void> {
   ipcMain.on('pet.togglePanel', () => togglePanel())
   // 말풍선 클릭 → 패널 열고 해당 스레드 선택
   const openMentionPanel = (id: string): void => {
-    if (!panel || typeof id !== 'string' || !id) return
-    if (!panel.isVisible()) {
-      panel.show()
+    const win = activePanel()
+    if (!win || typeof id !== 'string' || !id) return
+    if (!win.isVisible()) {
+      win.show()
       clearPanelBadge()
     }
-    panel.focus()
-    send(panel, 'mention.focus', id)
+    win.focus()
+    send(win, 'mention.focus', id)
   }
   ipcMain.on('pet.openMention', (_e, id: string) => openMentionPanel(id))
   ipcMain.handle(CMD.activityList, () => currentActivities())
@@ -224,12 +238,13 @@ async function main(): Promise<void> {
   })
 
   // 맥 스타일 창 컨트롤 (프레임리스 → 커스텀 신호등)
-  ipcMain.on('panel.hide', () => { panel?.hide() })
-  ipcMain.on('panel.minimize', () => { panel?.minimize() })
+  ipcMain.on('panel.hide', () => { activePanel()?.hide() })
+  ipcMain.on('panel.minimize', () => { activePanel()?.minimize() })
   ipcMain.on('panel.maximize', () => {
-    if (!panel) return
-    if (panel.isMaximized()) panel.unmaximize()
-    else panel.maximize()
+    const win = activePanel()
+    if (!win) return
+    if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
   })
 
   // 스레드 추적 on/off · 목록에서 제거
@@ -468,7 +483,7 @@ async function main(): Promise<void> {
   refillQuips() // 시작 시 한 배치 미리 생성
   setInterval(() => {
     if (!pet || pet.isDestroyed()) return
-    if (panel?.isVisible()) return
+    if (activePanel()?.isVisible()) return
     if (Date.now() - lastActivity < IDLE_MS) return
     refillQuips() // 캐시 보충(비동기)
     send(pet, EVT.bubble, idleLine())
@@ -641,6 +656,7 @@ app.on('window-all-closed', () => {
   /* 트레이 상주: macOS에서 유지 */
 })
 app.on('before-quit', () => {
+  isQuitting = true
   agentPoller?.stop()
   gateway?.stop().catch(() => {})
 })

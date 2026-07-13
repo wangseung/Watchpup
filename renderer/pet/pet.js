@@ -1,9 +1,13 @@
+import { activityStateLabel, formatElapsed } from './activity-format.js'
+
 const pet = document.getElementById('pet')
 const petImg = document.getElementById('pet-img')
 const petSprite = document.getElementById('pet-sprite')
 const face = pet.querySelector('.face')
 const badge = document.getElementById('badge')
 const bubble = document.getElementById('bubble')
+const activityHud = document.getElementById('activity-hud')
+const activityList = document.getElementById('activity-list')
 const STATES = ['idle', 'thinking', 'ready', 'chatting']
 
 // ---- 테마(글리프) / 커스텀 이미지 / Codex Pet 팩 ----
@@ -191,10 +195,68 @@ function syncSize() {
     const visible = !bubble.classList.contains('hidden')
     const bubbleH = visible ? bubble.getBoundingClientRect().height : 0
     const petArea = BASE_PET_AREA * petSizePercent / 100
-    const need = petArea + (visible ? bubbleH + 19 : 0) + PET_CHROME
-    window.watchpup.petResize(Math.ceil(need))
+    const hudVisible = !activityHud.classList.contains('hidden')
+    const hudH = hudVisible ? activityHud.getBoundingClientRect().height : 0
+    const visibleBlocks = 1 + Number(visible) + Number(hudVisible)
+    const gaps = Math.max(0, visibleBlocks - 1) * 12
+    const need = petArea + bubbleH + hudH + gaps + PET_CHROME
+    window.watchpup.petResize({ width: hudVisible ? 560 : 340, height: Math.ceil(need) })
   })
 }
+
+const ACTIVITY_ICONS = {
+  claude: './assets/claude.png',
+  codex: './assets/codex.png',
+  slack: './assets/slack.png',
+}
+const ACTIVITY_NAMES = { claude: 'Claude', codex: 'Codex', slack: 'Slack' }
+let activities = []
+
+function renderActivities(rows) {
+  activities = Array.isArray(rows) ? rows.slice(0, 5) : []
+  activityList.replaceChildren()
+  for (const activity of activities) {
+    if (!activity || !ACTIVITY_ICONS[activity.source]) continue
+    const row = document.createElement('button')
+    row.type = 'button'
+    row.className = `activity-row state-${activity.state || 'waiting'}`
+    row.title = `${ACTIVITY_NAMES[activity.source]} · ${activity.title || ''}`
+    row.setAttribute('aria-label', `${ACTIVITY_NAMES[activity.source]} 세션 열기: ${activity.title || ''}`)
+
+    const dot = document.createElement('span')
+    dot.className = 'activity-dot'
+    dot.setAttribute('aria-hidden', 'true')
+    const icon = document.createElement('img')
+    icon.className = 'activity-icon'
+    icon.src = ACTIVITY_ICONS[activity.source]
+    icon.alt = ''
+    const title = document.createElement('span')
+    title.className = 'activity-title'
+    title.textContent = activity.title || `${ACTIVITY_NAMES[activity.source]} 세션`
+    const state = document.createElement('span')
+    state.className = 'activity-state'
+    state.textContent = activityStateLabel(activity.state)
+    row.append(dot, icon, title, state)
+    if (Number.isFinite(activity.contextPercent)) {
+      const context = document.createElement('span')
+      context.className = 'activity-context'
+      context.textContent = `${Math.round(activity.contextPercent)}%`
+      row.append(context)
+    }
+    const elapsed = document.createElement('span')
+    elapsed.className = 'activity-elapsed'
+    elapsed.textContent = formatElapsed(activity.updatedAt)
+    row.append(elapsed)
+    row.addEventListener('click', () => window.watchpup.openActivity(activity.id))
+    activityList.append(row)
+  }
+  activityHud.classList.toggle('hidden', activityList.childElementCount === 0)
+  syncSize()
+}
+
+window.watchpup.activityList().then(renderActivities).catch(() => {})
+window.watchpup.onActivitySessions(renderActivities)
+setInterval(() => renderActivities(activities), 30_000)
 
 let bubbleTimer = null
 let chatStreaming = false
@@ -256,6 +318,8 @@ window.watchpup.onChatBubble((ev) => {
 
 bubble.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))
 bubble.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
+activityHud.addEventListener('mouseenter', () => window.watchpup.setMouseIgnore(false))
+activityHud.addEventListener('mouseleave', () => window.watchpup.setMouseIgnore(true))
 // 말풍선 클릭 → 스레드가 연결돼 있으면 그 스레드를 열고, 아니면 패널 토글
 bubble.addEventListener('click', () => {
   if (bubbleMentionId) window.watchpup.openMention(bubbleMentionId)

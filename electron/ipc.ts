@@ -1,4 +1,5 @@
 export const CMD = {
+  activityList: 'activity.list',
   mentionsList: 'mentions.list',
   mentionGet: 'mention.get',
   mentionRead: 'mention.read',
@@ -18,6 +19,7 @@ export const CMD = {
 } as const
 
 export const EVT = {
+  activitySessions: 'activity.sessions',
   pet: 'pet.state',
   mentionNew: 'mention.new',
   mentionReady: 'mention.ready',

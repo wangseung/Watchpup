@@ -28,9 +28,93 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 17px;
+  gap: 12px;
   padding: 10px 14px 12px;
   box-sizing: border-box;
+}
+
+/* ---- 최근 Claude / Codex / Slack 활동 ---- */
+.activity-hud {
+  width: min(532px, 100%);
+  padding: 7px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(19, 21, 24, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  pointer-events: auto;
+}
+.activity-hud.hidden { display: none; }
+.activity-list { display: grid; gap: 2px; }
+.activity-row {
+  width: 100%;
+  height: 38px;
+  display: grid;
+  grid-template-columns: 8px 24px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.activity-row:hover { background: rgba(255, 255, 255, 0.08); }
+.activity-row:active { background: rgba(255, 255, 255, 0.12); }
+.activity-row:focus-visible { outline: 2px solid rgba(83, 155, 245, 0.9); outline-offset: -2px; }
+.activity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8d929b;
+  box-shadow: 0 0 0 3px rgba(141, 146, 155, 0.12);
+}
+.state-running .activity-dot { background: #50d890; box-shadow: 0 0 0 3px rgba(80, 216, 144, 0.14); }
+.state-done .activity-dot { background: #6fa9ef; box-shadow: 0 0 0 3px rgba(111, 169, 239, 0.13); }
+.state-error .activity-dot { background: #ff6b6b; box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.14); }
+.activity-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.activity-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.12px;
+}
+.activity-state,
+.activity-context {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(245, 245, 247, 0.76);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+.state-running .activity-state { color: #8eeab7; background: rgba(80, 216, 144, 0.1); }
+.state-error .activity-state { color: #ffaaaa; background: rgba(255, 107, 107, 0.1); }
+.activity-context { color: #a8c8f3; }
+.activity-elapsed {
+  min-width: 31px;
+  color: rgba(245, 245, 247, 0.48);
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* ---- 말풍선 ---- */

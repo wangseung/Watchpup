@@ -9,6 +9,9 @@ function sub(channel: string, cb: (payload: unknown) => void): () => void {
 }
 
 contextBridge.exposeInMainWorld('watchpup', {
+  activityList: () => ipcRenderer.invoke(CMD.activityList),
+  onActivitySessions: (cb: (sessions: unknown) => void) => sub(EVT.activitySessions, cb),
+  openActivity: (id: string) => ipcRenderer.send('activity.open', id),
   mentionsList: () => ipcRenderer.invoke(CMD.mentionsList),
   mentionGet: (id: string) => ipcRenderer.invoke(CMD.mentionGet, id),
   mentionRead: (id: string) => ipcRenderer.invoke(CMD.mentionRead, id),
@@ -73,7 +76,7 @@ contextBridge.exposeInMainWorld('watchpup', {
   lessonsEdit: (key: string, index: number, text: string) => ipcRenderer.invoke('lessons.edit', { key, index, text }),
   onLessonsChanged: (cb: () => void) => sub('lessons.changed', () => cb()),
   onPetCodex: (cb: (v: unknown) => void) => sub(EVT.petCodex, cb),
-  petResize: (height: number) => ipcRenderer.send('pet.resize', height),
+  petResize: (size: number | { width: number; height: number }) => ipcRenderer.send('pet.resize', size),
   onActionStream: (cb: (p: unknown) => void) => sub(EVT.actionStream, cb),
   onActionDone: (cb: (p: unknown) => void) => sub(EVT.actionDone, cb),
   openExternal: (url: string) => ipcRenderer.send('open.external', url),

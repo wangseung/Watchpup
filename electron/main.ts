@@ -16,7 +16,7 @@ import { pickIdleLine } from '../src/core/presentation/idle.js'
 import { WatchpupGateway } from '../src/core/slack/gateway.js'
 import { generateQuips } from '../src/core/watchpup/quips.js'
 import { parseSkillMd } from '../src/core/watchpup/skill-import.js'
-import type { Mention, PetState, AgentStreamEvent } from '../src/core/types.js'
+import type { Mention, PetState, AgentStreamEvent, ActivitySession } from '../src/core/types.js'
 import { CMD, EVT } from './ipc.js'
 import type { ChatSendArgs, TodoToggleArgs, SettingsPatch, TokensPatch, TokensStatus, Playbook, ActionRunArgs, ReactionSetArgs } from './ipc.js'
 import { createPetWindow, createPanelWindow } from './windows.js'
@@ -25,10 +25,14 @@ import { readGlobalMcpCandidates } from './mcp-import.js'
 import { addGithubRepo } from './repos-github.js'
 import { integrationStatus, connectNotion, connectJira, disconnectIntegration } from './integrations.js'
 import { localRelaunchArgs } from '../src/core/watchpup/relaunch.js'
+import { LocalAgentPoller } from '../src/core/activity/session-poller.js'
+import { mergeActivities, slackActivities } from '../src/core/activity/merge.js'
+import { activityTarget } from './activity-link.js'
 
 let pet: BrowserWindow | null = null
 let panel: BrowserWindow | null = null
 let gateway: WatchpupGateway | null = null
+let agentPoller: LocalAgentPoller | null = null
 let unread = 0
 let lastActivity = Date.now()
 
@@ -76,6 +80,9 @@ async function main(): Promise<void> {
     mentions,
     lessons,
   }
+  let localActivities: ActivitySession[] = []
+  const currentActivities = (): ActivitySession[] => mergeActivities(localActivities, slackActivities(mentions.all()))
+  const broadcastActivities = (): void => send(pet, EVT.activitySessions, currentActivities())
 
   // 창 크기·위치 기억: resize/move 시 디바운스 저장, 생성 시 복원
   const boundsTimers = new Map<string, NodeJS.Timeout>()
@@ -163,7 +170,7 @@ async function main(): Promise<void> {
   // 펫 창 전용 IPC (window.watchpup.togglePanel / setMouseIgnore)
   ipcMain.on('pet.togglePanel', () => togglePanel())
   // 말풍선 클릭 → 패널 열고 해당 스레드 선택
-  ipcMain.on('pet.openMention', (_e, id: string) => {
+  const openMentionPanel = (id: string): void => {
     if (!panel || typeof id !== 'string' || !id) return
     if (!panel.isVisible()) {
       panel.show()
@@ -174,6 +181,19 @@ async function main(): Promise<void> {
     }
     panel.focus()
     send(panel, 'mention.focus', id)
+  }
+  ipcMain.on('pet.openMention', (_e, id: string) => openMentionPanel(id))
+  ipcMain.handle(CMD.activityList, () => currentActivities())
+  ipcMain.on('activity.open', (_e, id: string) => {
+    const target = activityTarget(id)
+    if (!target) return
+    if (target.kind === 'external') {
+      void shell.openExternal(target.url)
+    } else {
+      const mention = mentions.get(target.id)
+      if (mention?.permalink) void shell.openExternal(mention.permalink)
+      else openMentionPanel(target.id)
+    }
   })
   ipcMain.on('pet.setMouseIgnore', (_e, ignore: boolean) => {
     if (pet) pet.setIgnoreMouseEvents(!!ignore, { forward: true })
@@ -327,13 +347,21 @@ async function main(): Promise<void> {
     return c.myGroups
   })
   // 말풍선 크기에 맞춰 펫 창 높이를 동적으로 (하단 고정 → 위로 확장)
-  ipcMain.on('pet.resize', (_e, height: number) => {
-    if (!pet || pet.isDestroyed() || typeof height !== 'number') return
+  ipcMain.on('pet.resize', (_e, value: number | { width?: number; height?: number }) => {
+    if (!pet || pet.isDestroyed()) return
     const b = pet.getBounds()
-    const h = Math.max(164, Math.min(680, Math.round(height)))
-    if (h === b.height) return
+    const requestedHeight = typeof value === 'number' ? value : value?.height
+    const requestedWidth = typeof value === 'number' ? b.width : value?.width
+    if (typeof requestedHeight !== 'number' || typeof requestedWidth !== 'number') return
+    const h = Math.max(164, Math.min(800, Math.round(requestedHeight)))
+    const w = Math.max(340, Math.min(620, Math.round(requestedWidth)))
+    if (h === b.height && w === b.width) return
     const bottom = b.y + b.height
-    pet.setBounds({ x: b.x, y: bottom - h, width: b.width, height: h })
+    const centerX = b.x + b.width / 2
+    const workArea = screen.getDisplayMatching(b).workArea
+    const x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - w, Math.round(centerX - w / 2)))
+    const y = Math.max(workArea.y, bottom - h)
+    pet.setBounds({ x, y, width: w, height: h })
   })
 
   // 3) 엔진 생성(토큰 불필요) + 이벤트 브리지. 소스(봇/검색)는 아래에서 config·토큰에 따라 부착.
@@ -347,12 +375,14 @@ async function main(): Promise<void> {
     broadcast(EVT.mentionNew, m)
     // 즉시 "분석 중" 상태를 말풍선으로 (준비되면 아래에서 교체). 클릭하면 해당 스레드로.
     send(pet, EVT.bubble, { text: bubbleAnalyzing(m), mentionId: m.id })
+    broadcastActivities()
   })
   gateway.on('mention:ready', (m: Mention) => {
     lastActivity = Date.now()
     broadcast(EVT.mentionReady, m)
     // 펫 말풍선: 내가 해야 할 행동 유도. 클릭하면 해당 스레드가 열림.
     send(pet, EVT.bubble, { text: m.direct === false ? bubbleFollowup(m) : bubbleReady(m), mentionId: m.id })
+    broadcastActivities()
   })
   gateway.on('chat:stream', (p: { mentionId: string; event: AgentStreamEvent; source?: string }) => {
     lastActivity = Date.now()
@@ -376,7 +406,15 @@ async function main(): Promise<void> {
   })
   gateway.on('mentions:refresh', () => {
     broadcast('mentions.refresh', null)
+    broadcastActivities()
   })
+
+  agentPoller = new LocalAgentPoller()
+  agentPoller.on('snapshot', (activities: ActivitySession[]) => {
+    localActivities = activities
+    broadcastActivities()
+  })
+  agentPoller.start()
   gateway.on('badge', (n: number) => {
     unread = n
     send(pet, EVT.badge, n)
@@ -428,6 +466,7 @@ async function main(): Promise<void> {
   ipcMain.handle(CMD.mentionGet, (_e, id: string) => mentions.get(id) ?? null)
   ipcMain.handle(CMD.mentionRead, (_e, id: string) => {
     mentions.markRead(id)
+    broadcastActivities()
   })
   ipcMain.handle(CMD.todoToggle, (_e, a: TodoToggleArgs) => {
     gateway?.toggleTodo(a.mentionId, a.index)
@@ -568,6 +607,7 @@ app.on('window-all-closed', () => {
   /* 트레이 상주: macOS에서 유지 */
 })
 app.on('before-quit', () => {
+  agentPoller?.stop()
   gateway?.stop().catch(() => {})
 })
 

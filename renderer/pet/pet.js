@@ -324,61 +324,79 @@ const ACTIVITY_ICONS = {
 const ACTIVITY_NAMES = { claude: 'Claude', codex: 'Codex', slack: 'Slack' }
 let activities = []
 
+function createActivityRow() {
+  const row = document.createElement('div')
+  row.tabIndex = 0
+  row.setAttribute('role', 'button')
+
+  const dot = document.createElement('span')
+  dot.className = 'activity-dot'
+  dot.setAttribute('aria-hidden', 'true')
+  const icon = document.createElement('img')
+  icon.className = 'activity-icon'
+  icon.alt = ''
+  const title = document.createElement('span')
+  title.className = 'activity-title'
+  const state = document.createElement('span')
+  state.className = 'activity-state'
+  const context = document.createElement('span')
+  context.className = 'activity-context'
+  row.append(dot, icon, title, state, context)
+  const elapsed = document.createElement('span')
+  elapsed.className = 'activity-elapsed'
+  const open = document.createElement('button')
+  open.type = 'button'
+  open.className = 'activity-open'
+  open.addEventListener('click', (event) => {
+    event.stopPropagation()
+    window.watchpup.openActivity(row.dataset.activityId)
+  })
+  row.append(elapsed, open)
+  row.addEventListener('click', () => window.watchpup.openActivityDetail(row.dataset.activityId))
+  row.addEventListener('keydown', (event) => {
+    if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return
+    event.preventDefault()
+    window.watchpup.openActivityDetail(row.dataset.activityId)
+  })
+  row.activityElements = { icon, title, state, context, elapsed, open }
+  return row
+}
+
+function updateActivityRow(row, activity) {
+  const { icon, title, state, context, elapsed, open } = row.activityElements
+  row.dataset.activityId = activity.id
+  row.className = `activity-row state-${activity.state || 'waiting'}`
+  row.title = `Watchpup에서 보기 · ${activity.title || ''}`
+  row.setAttribute('aria-label', `Watchpup에서 상세 보기: ${activity.title || ''}`)
+  icon.src = ACTIVITY_ICONS[activity.source]
+  title.textContent = activity.title || `${ACTIVITY_NAMES[activity.source]} 세션`
+  state.textContent = activityStateLabel(activity.state)
+  context.hidden = !Number.isFinite(activity.contextPercent)
+  context.textContent = context.hidden ? '' : `${Math.round(activity.contextPercent)}%`
+  elapsed.textContent = formatElapsed(activity.updatedAt)
+  open.textContent = activity.source === 'slack' ? '상세' : '열기'
+  open.disabled = activity.canOpen === false
+  const directTarget = activity.source === 'slack' ? 'Watchpup 스레드 상세' : `${ACTIVITY_NAMES[activity.source]} 세션`
+  open.title = open.disabled ? '직접 열 수 없는 항목입니다' : `${directTarget}으로 이동`
+  open.setAttribute('aria-label', open.title)
+}
+
 function renderActivities(rows) {
   activities = Array.isArray(rows) ? rows.slice(0, 5) : []
-  activityList.replaceChildren()
-  for (const activity of activities) {
-    if (!activity || !ACTIVITY_ICONS[activity.source]) continue
-    const row = document.createElement('div')
-    row.className = `activity-row state-${activity.state || 'waiting'}`
-    row.tabIndex = 0
-    row.setAttribute('role', 'button')
-    row.title = `Watchpup에서 보기 · ${activity.title || ''}`
-    row.setAttribute('aria-label', `Watchpup에서 상세 보기: ${activity.title || ''}`)
+  const visibleActivities = activities.filter((activity) => activity && ACTIVITY_ICONS[activity.source])
+  const existingRows = new Map(
+    Array.from(activityList.children).map((row) => [row.dataset.activityId, row]),
+  )
 
-    const dot = document.createElement('span')
-    dot.className = 'activity-dot'
-    dot.setAttribute('aria-hidden', 'true')
-    const icon = document.createElement('img')
-    icon.className = 'activity-icon'
-    icon.src = ACTIVITY_ICONS[activity.source]
-    icon.alt = ''
-    const title = document.createElement('span')
-    title.className = 'activity-title'
-    title.textContent = activity.title || `${ACTIVITY_NAMES[activity.source]} 세션`
-    const state = document.createElement('span')
-    state.className = 'activity-state'
-    state.textContent = activityStateLabel(activity.state)
-    row.append(dot, icon, title, state)
-    if (Number.isFinite(activity.contextPercent)) {
-      const context = document.createElement('span')
-      context.className = 'activity-context'
-      context.textContent = `${Math.round(activity.contextPercent)}%`
-      row.append(context)
-    }
-    const elapsed = document.createElement('span')
-    elapsed.className = 'activity-elapsed'
-    elapsed.textContent = formatElapsed(activity.updatedAt)
-    const open = document.createElement('button')
-    open.type = 'button'
-    open.className = 'activity-open'
-    open.textContent = activity.source === 'slack' ? '상세' : '열기'
-    open.disabled = activity.canOpen === false
-    const directTarget = activity.source === 'slack' ? 'Watchpup 스레드 상세' : `${ACTIVITY_NAMES[activity.source]} 세션`
-    open.title = open.disabled ? '직접 열 수 없는 항목입니다' : `${directTarget}으로 이동`
-    open.setAttribute('aria-label', open.title)
-    open.addEventListener('click', (event) => {
-      event.stopPropagation()
-      window.watchpup.openActivity(activity.id)
-    })
-    row.append(elapsed, open)
-    row.addEventListener('click', () => window.watchpup.openActivityDetail(activity.id))
-    row.addEventListener('keydown', (event) => {
-      if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return
-      event.preventDefault()
-      window.watchpup.openActivityDetail(activity.id)
-    })
-    activityList.append(row)
+  visibleActivities.forEach((activity, index) => {
+    const row = existingRows.get(activity.id) || createActivityRow()
+    updateActivityRow(row, activity)
+    const rowAtIndex = activityList.children[index]
+    if (rowAtIndex !== row) activityList.insertBefore(row, rowAtIndex || null)
+    existingRows.delete(activity.id)
+  })
+  for (const staleRow of existingRows.values()) {
+    staleRow.remove()
   }
   updateHudFoldControl()
   updateHudVisibility()

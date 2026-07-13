@@ -80,7 +80,12 @@ contextBridge.exposeInMainWorld('watchpup', {
   lessonsEdit: (key: string, index: number, text: string) => ipcRenderer.invoke('lessons.edit', { key, index, text }),
   onLessonsChanged: (cb: () => void) => sub('lessons.changed', () => cb()),
   onPetCodex: (cb: (v: unknown) => void) => sub(EVT.petCodex, cb),
-  petResize: (size: number | { width: number; height: number; anchor?: 'left' | 'right' }) => ipcRenderer.send('pet.resize', size),
+  petResize: (size: number | {
+    width: number
+    height: number
+    anchor?: 'left' | 'right'
+    verticalAnchor?: 'top' | 'bottom'
+  }) => ipcRenderer.send('pet.resize', size),
   onActionStream: (cb: (p: unknown) => void) => sub(EVT.actionStream, cb),
   onActionDone: (cb: (p: unknown) => void) => sub(EVT.actionDone, cb),
   openExternal: (url: string) => ipcRenderer.send('open.external', url),

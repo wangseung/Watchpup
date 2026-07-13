@@ -347,8 +347,13 @@ async function main(): Promise<void> {
     gateway?.reapplyGroups()
     return c.myGroups
   })
-  // 말풍선 크기에 맞춰 펫 창 높이를 동적으로 (하단 고정 → 위로 확장)
-  ipcMain.on('pet.resize', (_e, value: number | { width?: number; height?: number; anchor?: 'left' | 'right' }) => {
+  // 말풍선은 하단을, HUD 접기·펼치기는 펫이 있는 상단을 기준으로 창 크기를 조절한다.
+  ipcMain.on('pet.resize', (_e, value: number | {
+    width?: number
+    height?: number
+    anchor?: 'left' | 'right'
+    verticalAnchor?: 'top' | 'bottom'
+  }) => {
     if (!pet || pet.isDestroyed()) return
     const b = pet.getBounds()
     const requestedHeight = typeof value === 'number' ? value : value?.height
@@ -363,7 +368,10 @@ async function main(): Promise<void> {
       ? b.x
       : b.x + b.width - w
     const x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - w, Math.round(requestedX)))
-    const y = Math.max(workArea.y, bottom - h)
+    const requestedY = typeof value === 'object' && value?.verticalAnchor === 'top'
+      ? b.y
+      : bottom - h
+    const y = Math.max(workArea.y, Math.min(workArea.y + workArea.height - h, Math.round(requestedY)))
     pet.setBounds({ x, y, width: w, height: h })
   })
 

@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld('watchpup', {
   openActivity: (id: string) => ipcRenderer.send('activity.open', id),
   openActivityDetail: (id?: string) => ipcRenderer.send('activity.detail', id),
   mentionsList: () => ipcRenderer.invoke(CMD.mentionsList),
+  workLists: () => ipcRenderer.invoke(CMD.workLists),
+  workItems: (listId?: string, includeCompleted = false) => ipcRenderer.invoke(CMD.workItems, { listId, includeCompleted }),
+  workListSelect: (listId: string) => ipcRenderer.invoke(CMD.workListSelect, listId),
+  workReminderComplete: (reminderId: string, completed: boolean) =>
+    ipcRenderer.invoke(CMD.workReminderComplete, { reminderId, completed }),
+  workReminderLinkAdd: (reminderId: string, link: { kind: string; title: string; url: string }) =>
+    ipcRenderer.invoke(CMD.workReminderLinkAdd, { reminderId, ...link }),
   mentionGet: (id: string) => ipcRenderer.invoke(CMD.mentionGet, id),
   mentionRead: (id: string) => ipcRenderer.invoke(CMD.mentionRead, id),
   threadImport: (permalink: string) => ipcRenderer.invoke(CMD.threadImport, permalink),

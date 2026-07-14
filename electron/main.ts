@@ -29,6 +29,7 @@ import { LocalAgentPoller, type ActivityHistoryRange } from '../src/core/activit
 import { mergeActivities, slackActivities } from '../src/core/activity/merge.js'
 import { activityTarget } from './activity-link.js'
 import { resolveWatchpupConfigPath } from '../src/core/config/path.js'
+import { ReminderGateway, readGoalBarReminderPreference } from './reminders.js'
 
 let pet: BrowserWindow | null = null
 let panel: BrowserWindow | null = null
@@ -75,6 +76,7 @@ async function main(): Promise<void> {
   const state = new StateStore(join(config.dataDir, 'watchpup-state.json'))
   const audit = new AuditStore(join(config.dataDir, 'audit.jsonl'))
   const lessons = new LessonStore(join(config.dataDir, 'lessons.json'))
+  const reminders = new ReminderGateway()
   const deps = {
     config,
     sessions,
@@ -90,6 +92,47 @@ async function main(): Promise<void> {
   // 렌더러가 창 로드 직후 요청하는 초기 설정 핸들러는 창을 만들기 전에 등록한다.
   // 늦게 등록하면 첫 요청이 실패한 뒤 기본 UI 값(100%)이 그대로 남을 수 있다.
   ipcMain.handle(CMD.settingsGet, () => configStore.get())
+  ipcMain.handle(CMD.workLists, async () => {
+    const lists = await reminders.lists()
+    const current = configStore.get()
+    const goalBar = readGoalBarReminderPreference()
+    const selected = lists.find((list) => list.id === current.reminderListId)
+      ?? lists.find((list) => list.id === goalBar?.id)
+      ?? lists.find((list) => list.name === goalBar?.name && (!goalBar.account || list.account === goalBar.account))
+      ?? lists[0]
+    if (selected && selected.id !== current.reminderListId) {
+      deps.config = configStore.update({
+        reminderListId: selected.id,
+        reminderListName: selected.name,
+        reminderAccountName: selected.account,
+      })
+    }
+    return { lists, selectedId: selected?.id ?? '', goalBarMatched: Boolean(selected && goalBar && (selected.id === goalBar.id || (selected.name === goalBar.name && selected.account === goalBar.account))) }
+  })
+  ipcMain.handle(CMD.workItems, async (_e, args: { listId?: string; includeCompleted?: boolean } = {}) => {
+    const current = configStore.get()
+    const listId = args.listId || current.reminderListId
+    if (!listId) return []
+    return reminders.tasks(listId, args.includeCompleted ?? current.showCompletedReminders)
+  })
+  ipcMain.handle(CMD.workListSelect, async (_e, listId: string) => {
+    const selected = (await reminders.lists()).find((list) => list.id === listId)
+    if (!selected) throw new Error('선택한 Reminder 목록을 찾지 못했습니다.')
+    deps.config = configStore.update({
+      reminderListId: selected.id,
+      reminderListName: selected.name,
+      reminderAccountName: selected.account,
+    })
+    return selected
+  })
+  ipcMain.handle(CMD.workReminderComplete, async (_e, args: { reminderId: string; completed: boolean }) => {
+    await reminders.setCompleted(args.reminderId, args.completed)
+    return { ok: true }
+  })
+  ipcMain.handle(CMD.workReminderLinkAdd, async (_e, args: { reminderId: string; title: string; url: string }) => {
+    await reminders.appendLink(args.reminderId, args.title, args.url)
+    return { ok: true }
+  })
   ipcMain.handle('pet.images.get', () => petImagesFromDir(configStore.get().petImageDir))
   ipcMain.handle('pet.codex.get', () => resolveCodexPet(configStore.get().petCodexDir))
 

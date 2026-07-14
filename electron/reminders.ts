@@ -102,5 +102,38 @@ export class ReminderGateway {
       })
       .sort((a, b) => (a.completed === b.completed ? (a.dueAt ?? Number.MAX_SAFE_INTEGER) - (b.dueAt ?? Number.MAX_SAFE_INTEGER) : Number(a.completed) - Number(b.completed)))
   }
-}
 
+  async setCompleted(reminderId: string, completed: boolean): Promise<void> {
+    await this.runScript(`
+      const app = Application('Reminders');
+      const targetId = ${js(reminderId)};
+      let target = null;
+      for (const account of app.accounts()) for (const list of account.lists()) for (const reminder of list.reminders()) {
+        if (reminder.id() === targetId) target = reminder;
+      }
+      if (!target) throw new Error('Reminder를 찾지 못했습니다.');
+      target.completed = ${completed ? 'true' : 'false'};
+      JSON.stringify({ ok: true });
+    `)
+  }
+
+  async appendLink(reminderId: string, title: string, url: string): Promise<void> {
+    const parsed = new URL(url)
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('http 또는 https 링크만 추가할 수 있습니다.')
+    const safeTitle = title.trim().replace(/[\[\]]/g, '') || parsed.hostname
+    const markdown = `[${safeTitle}](${parsed.toString()})`
+    await this.runScript(`
+      const app = Application('Reminders');
+      const targetId = ${js(reminderId)};
+      let target = null;
+      for (const account of app.accounts()) for (const list of account.lists()) for (const reminder of list.reminders()) {
+        if (reminder.id() === targetId) target = reminder;
+      }
+      if (!target) throw new Error('Reminder를 찾지 못했습니다.');
+      const before = (() => { try { return target.body() || ''; } catch (_) { return ''; } })();
+      const link = ${js(markdown)};
+      if (!before.includes(${js(parsed.toString())})) target.body = before ? before.replace(/\s+$/, '') + '\n' + link : link;
+      JSON.stringify({ ok: true });
+    `)
+  }
+}

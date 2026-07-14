@@ -17,6 +17,11 @@ export const CMD = {
   playbookDelete: 'playbook.delete',
   actionRun: 'action.run',
   reactionSet: 'reaction.set',
+  workLists: 'work.lists',
+  workItems: 'work.items',
+  workListSelect: 'work.list.select',
+  workReminderComplete: 'work.reminder.complete',
+  workReminderLinkAdd: 'work.reminder.link.add',
 } as const
 
 export const EVT = {

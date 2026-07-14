@@ -8,6 +8,7 @@ import { loadSettings, loadPlaybooks, showSset, setOnPlaybooksChanged } from './
 import { state, getChat, getActionLog, sortedMentions, nav } from './store.js'
 import { renderDigest, renderTodosView } from './views.js'
 import { renderActivityDetail, renderDetail } from './detail.js'
+import { initWorkView, refreshWorkView } from './work.js'
 
 // playbook 변경 시 열린 상세의 액션 버튼 갱신(settings→panel 결합을 훅으로만)
 setOnPlaybooksChanged(() => {
@@ -351,9 +352,13 @@ document.querySelectorAll('.tab').forEach((tab) => {
       refresh().then(renderTodosView).catch(renderTodosView)
     } else if (tab.dataset.tab === 'agent') {
       refreshActivities().catch(() => {})
+    } else if (tab.dataset.tab === 'work') {
+      refreshWorkView({ preserveSelection: true }).catch(() => {})
     }
   })
 })
+
+initWorkView().catch(() => {})
 
 // ESC: 텍스트 입력 중이면 먼저 포커스 해제, 아니면 패널 닫기(숨김)
 document.addEventListener('keydown', (e) => {

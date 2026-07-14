@@ -686,9 +686,11 @@ async function main(): Promise<void> {
   })
   ipcMain.handle('integration.connectJira', async (_e, a: { site: string; email: string; token: string }) => {
     deps.config = await connectJira(configStore, keychain, { site: a.site || '', email: a.email || '', token: a.token || '' })
+    workStatus.resetJiraAuth()
   })
   ipcMain.handle('integration.disconnect', (_e, id: 'notion' | 'jira') => {
     deps.config = disconnectIntegration(configStore, id)
+    if (id === 'jira') workStatus.resetJiraAuth()
   })
 
   // 6) 감지원이 하나라도 붙었고 mySlackUserId가 있으면 기동

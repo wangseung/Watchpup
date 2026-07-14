@@ -46,12 +46,20 @@ function configuredJira(configStore: ConfigStore): { host: string; email: string
 }
 
 export class WorkStatusService {
+  private jiraAuthVerifiedAt = 0
+  private jiraAuthPromise: Promise<void> | null = null
+
   constructor(
     private readonly configStore: ConfigStore,
     private readonly keychain: Keychain,
     private readonly gh: GhRunner = defaultGhRunner,
     private readonly fetcher: WorkFetch = fetch,
   ) {}
+
+  resetJiraAuth(): void {
+    this.jiraAuthVerifiedAt = 0
+    this.jiraAuthPromise = null
+  }
 
   async status(url: string): Promise<WorkLinkStatus> {
     const jira = parseJiraLink(url)
@@ -87,13 +95,14 @@ export class WorkStatusService {
     return this.githubStatus(github)
   }
 
-  private async jiraRequest(site: string, path: string, init: RequestInit = {}): Promise<unknown> {
+  private async jiraRequest(site: string, path: string, init: RequestInit = {}, verifyAuth = true): Promise<unknown> {
     const configured = configuredJira(this.configStore)
     if (!configured) throw new Error('설정에서 Jira를 먼저 연결해주세요.')
     const target = new URL(site)
     if (target.hostname.toLowerCase() !== configured.host) throw new Error('연결된 Jira 사이트와 링크의 호스트가 다릅니다.')
     const token = await this.keychain.get(JIRA_KEY)
     if (!token) throw new Error('Jira API 토큰을 Keychain에서 찾지 못했습니다.')
+    if (verifyAuth) await this.ensureJiraAuthenticated(site)
     const response = await this.fetcher(`${target.origin}${path}`, {
       ...init,
       headers: {
@@ -104,9 +113,40 @@ export class WorkStatusService {
       },
       signal: init.signal ?? AbortSignal.timeout(20_000),
     })
-    if (!response.ok) throw new Error(`Jira 요청 실패 (${response.status})`)
+    if (!response.ok) {
+      if (response.status === 401) {
+        this.jiraAuthVerifiedAt = 0
+        throw new Error('Jira 인증이 만료되었습니다. 설정에서 이메일과 API 토큰으로 Jira를 다시 연결해주세요.')
+      }
+      const detail = await this.jiraErrorDetail(response)
+      if (response.status === 403) throw new Error(`Jira 이슈 접근 권한이 없습니다.${detail ? ` ${detail}` : ''}`)
+      if (response.status === 404) throw new Error(`Jira 이슈를 찾지 못했거나 접근 권한이 없습니다.${detail ? ` ${detail}` : ''}`)
+      throw new Error(`Jira 요청 실패 (${response.status})${detail ? `: ${detail}` : ''}`)
+    }
     if (response.status === 204) return null
     return response.json()
+  }
+
+  private async ensureJiraAuthenticated(site: string): Promise<void> {
+    if (Date.now() - this.jiraAuthVerifiedAt < 5 * 60_000) return
+    if (!this.jiraAuthPromise) {
+      this.jiraAuthPromise = this.jiraRequest(site, '/rest/api/3/myself', {}, false)
+        .then(() => { this.jiraAuthVerifiedAt = Date.now() })
+        .finally(() => { this.jiraAuthPromise = null })
+    }
+    await this.jiraAuthPromise
+  }
+
+  private async jiraErrorDetail(response: Response): Promise<string> {
+    try {
+      const body = await response.json() as Record<string, unknown>
+      if (Array.isArray(body.errorMessages)) return body.errorMessages.filter((value): value is string => typeof value === 'string').join(' ')
+      if (typeof body.message === 'string') return body.message
+      if (typeof body.error === 'string') return body.error
+    } catch {
+      /* 응답 본문이 JSON이 아니면 상태 코드만 사용한다. */
+    }
+    return ''
   }
 
   private async jiraStatus(site: string, key: string): Promise<WorkLinkStatus> {

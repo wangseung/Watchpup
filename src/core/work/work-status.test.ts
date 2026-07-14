@@ -10,6 +10,7 @@ function configStore(site = 'example.atlassian.net') {
 describe('WorkStatusService', () => {
   it('reads Jira status and only offers server-provided transitions', async () => {
     const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (url.endsWith('/myself')) return new Response(JSON.stringify({ accountId: 'me' }), { status: 200 })
       if (url.endsWith('/transitions')) return new Response(JSON.stringify({ transitions: [{ id: '31', name: '진행 중' }] }), { status: 200 })
       return new Response(JSON.stringify({ fields: { summary: 'Fix issue', status: { name: '할 일' }, assignee: { displayName: 'Jack' } } }), { status: 200 })
     })
@@ -25,6 +26,14 @@ describe('WorkStatusService', () => {
     const service = new WorkStatusService(configStore(), { get: async () => 'secret' } as any, vi.fn(), fetcher)
     await expect(service.status('https://evil.example/browse/APP-123')).rejects.toThrow('호스트가 다릅니다')
     expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('reports expired Jira credentials before requesting an issue', async () => {
+    const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => new Response('', { status: 401 }))
+    const service = new WorkStatusService(configStore(), { get: async () => 'expired' } as any, vi.fn(), fetcher)
+    await expect(service.status('https://example.atlassian.net/browse/APP-123')).rejects.toThrow('Jira 인증이 만료되었습니다')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0][0]).toContain('/rest/api/3/myself')
   })
 
   it('reads and updates GitHub issue state through gh', async () => {

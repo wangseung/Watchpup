@@ -8,7 +8,7 @@ import type { Keychain } from '../src/core/secrets/keychain.js'
 import type { WatchpupConfig } from '../src/core/config/schema.js'
 
 const NOTION_KEY = 'MCP_NOTION_TOKEN'
-const JIRA_KEY = 'MCP_JIRA_TOKEN'
+export const JIRA_KEY = 'MCP_JIRA_TOKEN'
 
 export interface IntegrationStatus {
   notion: { connected: boolean }

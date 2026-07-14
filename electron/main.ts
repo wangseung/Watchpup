@@ -30,6 +30,7 @@ import { mergeActivities, slackActivities } from '../src/core/activity/merge.js'
 import { activityTarget } from './activity-link.js'
 import { resolveWatchpupConfigPath } from '../src/core/config/path.js'
 import { ReminderGateway, readGoalBarReminderPreference } from './reminders.js'
+import { WorkStatusService } from './work-status.js'
 
 let pet: BrowserWindow | null = null
 let panel: BrowserWindow | null = null
@@ -77,6 +78,7 @@ async function main(): Promise<void> {
   const audit = new AuditStore(join(config.dataDir, 'audit.jsonl'))
   const lessons = new LessonStore(join(config.dataDir, 'lessons.json'))
   const reminders = new ReminderGateway()
+  const workStatus = new WorkStatusService(configStore, keychain)
   const deps = {
     config,
     sessions,
@@ -133,6 +135,8 @@ async function main(): Promise<void> {
     await reminders.appendLink(args.reminderId, args.title, args.url)
     return { ok: true }
   })
+  ipcMain.handle(CMD.workLinkStatus, (_e, url: string) => workStatus.status(url))
+  ipcMain.handle(CMD.workLinkAction, (_e, args: { url: string; actionId: string }) => workStatus.runAction(args.url, args.actionId))
   ipcMain.handle('pet.images.get', () => petImagesFromDir(configStore.get().petImageDir))
   ipcMain.handle('pet.codex.get', () => resolveCodexPet(configStore.get().petCodexDir))
 

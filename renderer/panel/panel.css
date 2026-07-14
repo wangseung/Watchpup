@@ -1760,7 +1760,7 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-notes.empty-note, .work-section-empty { color: var(--fg-faint); font-style: italic; }
 .work-links { display: flex; flex-direction: column; gap: 7px; }
 .work-link-row {
-  display: flex; align-items: center; gap: var(--sp-3); padding: 9px 10px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: 9px 10px;
   border: 1px solid var(--border); border-radius: var(--r-2); background: var(--bg-elev);
 }
 .work-link-badge { flex: 0 0 54px; padding: 4px 7px; border-radius: var(--r-1); }
@@ -1779,6 +1779,31 @@ details.tools .section + .section { margin-top: var(--sp-4); }
   gap: 7px; padding-top: var(--sp-2); border-top: 1px dashed var(--border);
 }
 .work-link-form button { padding-inline: 13px; }
+.work-link-status {
+  flex: 1 0 calc(100% - 66px); margin-left: 66px; padding-top: 7px;
+  border-top: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: space-between; gap: var(--sp-2); min-width: 0;
+}
+.work-link-status.loading, .work-link-status.error { color: var(--fg-faint); font-size: 10px; }
+.work-link-status.error { color: #c94a42; }
+.work-status-summary { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.work-status-pill {
+  flex: 0 0 auto; border-radius: 999px; padding: 3px 7px;
+  background: var(--accent-soft); color: var(--accent-strong); font-size: 9.5px; font-weight: 750;
+}
+.work-status-pill.status-open { color: var(--st-ready); background: rgba(63, 154, 73, .12); }
+.work-status-pill.status-closed, .work-status-pill.status-merged { color: #7a64b0; background: rgba(122, 100, 176, .13); }
+.work-status-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-faint); font-family: var(--font-mono); font-size: 9.5px; }
+.work-status-controls { display: flex; align-items: center; gap: 5px; }
+.work-status-controls select {
+  min-width: 96px; max-width: 160px; border: 1px solid var(--border); border-radius: var(--r-1);
+  padding: 4px 6px; background: var(--bg); color: var(--fg); font: inherit; font-size: 10px;
+}
+.work-status-controls button {
+  border: 1px solid var(--accent); border-radius: var(--r-1); padding: 4px 7px;
+  background: var(--accent-soft); color: var(--accent-strong); font: inherit; font-size: 10px; font-weight: 650; cursor: pointer;
+}
+.work-status-controls button:disabled { opacity: .55; cursor: wait; }
 
 @media (max-width: 760px) {
   #work-list-col { flex-basis: 42%; min-width: 210px; }
@@ -1786,6 +1811,7 @@ details.tools .section + .section { margin-top: var(--sp-4); }
   .work-link-form input[type="text"] { display: none; }
   .work-link-row { align-items: flex-start; flex-wrap: wrap; }
   .work-link-info { min-width: 140px; }
+  .work-link-status { margin-left: 0; flex-basis: 100%; align-items: flex-start; flex-direction: column; }
 }
 
 /* Obsidian Vault 경로 + 폴더 선택 버튼 */

@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('watchpup', {
     ipcRenderer.invoke(CMD.workReminderComplete, { reminderId, completed }),
   workReminderLinkAdd: (reminderId: string, link: { kind: string; title: string; url: string }) =>
     ipcRenderer.invoke(CMD.workReminderLinkAdd, { reminderId, ...link }),
+  workLinkStatus: (url: string) => ipcRenderer.invoke(CMD.workLinkStatus, url),
+  workLinkAction: (url: string, actionId: string) => ipcRenderer.invoke(CMD.workLinkAction, { url, actionId }),
   mentionGet: (id: string) => ipcRenderer.invoke(CMD.mentionGet, id),
   mentionRead: (id: string) => ipcRenderer.invoke(CMD.mentionRead, id),
   threadImport: (permalink: string) => ipcRenderer.invoke(CMD.threadImport, permalink),

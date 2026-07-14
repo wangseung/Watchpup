@@ -22,6 +22,8 @@ export const CMD = {
   workListSelect: 'work.list.select',
   workReminderComplete: 'work.reminder.complete',
   workReminderLinkAdd: 'work.reminder.link.add',
+  workLinkStatus: 'work.link.status',
+  workLinkAction: 'work.link.action',
 } as const
 
 export const EVT = {

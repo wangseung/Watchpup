@@ -91,7 +91,56 @@ function linkRow(link) {
   open.addEventListener('click', () => window.watchpup.openExternal(link.url))
   actions.append(copy, open)
   row.append(badge, info, actions)
+  if (link.kind === 'jira' || link.kind === 'github') {
+    const statusHost = el('div', 'work-link-status loading', '상태 불러오는 중…')
+    row.append(statusHost)
+    window.watchpup.workLinkStatus(link.url)
+      .then((status) => renderLinkStatus(statusHost, link, status))
+      .catch((error) => {
+        statusHost.className = 'work-link-status error'
+        statusHost.textContent = error?.message || '상태를 불러오지 못했습니다.'
+      })
+  }
   return row
+}
+
+function renderLinkStatus(host, link, status) {
+  host.className = 'work-link-status'
+  host.replaceChildren()
+  const summary = el('div', 'work-status-summary')
+  const statusClass = String(status.status).toLowerCase().replace(/[^a-z0-9_-]+/g, '-')
+  summary.append(el('span', `work-status-pill status-${statusClass}`, status.status))
+  if (status.detail) summary.append(el('span', 'work-status-detail', status.detail))
+  host.append(summary)
+  if (!status.actions?.length) return
+
+  const controls = el('div', 'work-status-controls')
+  const select = el('select')
+  for (const action of status.actions) {
+    const option = el('option', '', action.label)
+    option.value = action.id
+    option.dataset.danger = action.danger ? 'true' : 'false'
+    select.append(option)
+  }
+  const apply = el('button', '', '상태 변경')
+  apply.type = 'button'
+  apply.addEventListener('click', async () => {
+    const option = select.selectedOptions[0]
+    if (!option) return
+    if (!window.confirm(`“${option.textContent}” 상태로 변경할까요?\n\n${status.title}`)) return
+    apply.disabled = true
+    apply.textContent = '변경 중…'
+    try {
+      const next = await window.watchpup.workLinkAction(link.url, select.value)
+      renderLinkStatus(host, link, next)
+    } catch (error) {
+      apply.disabled = false
+      apply.textContent = '상태 변경'
+      hintEl.textContent = error?.message || '상태를 변경하지 못했습니다.'
+    }
+  })
+  controls.append(select, apply)
+  host.append(controls)
 }
 
 function renderDetail() {

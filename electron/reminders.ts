@@ -1,7 +1,4 @@
 import { execFile } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { parseWorkLinks } from '../src/core/work/links.js'
 import type { ReminderListRef, WorkItem } from '../src/core/work/types.js'
@@ -26,24 +23,6 @@ function dateMs(value: unknown): number | undefined {
   if (typeof value !== 'string' || !value) return undefined
   const parsed = Date.parse(value)
   return Number.isFinite(parsed) ? parsed : undefined
-}
-
-export interface GoalBarReminderPreference {
-  id: string
-  name: string
-  account: string
-}
-
-export function readGoalBarReminderPreference(path = join(homedir(), 'Library', 'Application Support', 'GoalBar', 'goals.json')): GoalBarReminderPreference | null {
-  try {
-    const settings = JSON.parse(readFileSync(path, 'utf8'))?.settings ?? {}
-    const id = typeof settings.reminderListIdentifier === 'string' ? settings.reminderListIdentifier : ''
-    const name = typeof settings.reminderListTitle === 'string' ? settings.reminderListTitle : ''
-    const account = typeof settings.reminderListSourceTitle === 'string' ? settings.reminderListSourceTitle : ''
-    return id || name ? { id, name, account } : null
-  } catch {
-    return null
-  }
 }
 
 export class ReminderGateway {

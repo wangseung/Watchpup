@@ -83,7 +83,7 @@ export const watchpupConfigSchema = z.object({
   hudAlignment: z.enum(['left', 'right']).default('right'),
   // 세션 HUD를 화면에 표시할지. 수집은 이 값과 무관하게 계속된다.
   showActivityHud: z.boolean().default(false),
-  // Work 탭에서 사용할 Apple Reminders 목록. GoalBar 설정을 최초 후보로 재사용한다.
+  // Work 탭에서 사용할 Apple Reminders 목록. Watchpup이 자체적으로 선택을 저장한다.
   reminderListId: z.string().default(''),
   reminderListName: z.string().default(''),
   reminderAccountName: z.string().default(''),

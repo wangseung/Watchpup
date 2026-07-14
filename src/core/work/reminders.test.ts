@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdtempSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import { ReminderGateway, readGoalBarReminderPreference } from '../../../electron/reminders.js'
+import { ReminderGateway } from '../../../electron/reminders.js'
 
 describe('ReminderGateway', () => {
   it('목록과 작업을 Work 모델로 변환한다', async () => {
@@ -15,11 +12,5 @@ describe('ReminderGateway', () => {
     const tasks = await gateway.tasks('L1')
     expect(tasks[0].links[0].kind).toBe('jira')
     expect(tasks[0].dueAt).toBe(Date.parse('2026-07-20T00:00:00.000Z'))
-  })
-
-  it('GoalBar의 기존 Reminder 선택을 읽는다', () => {
-    const path = join(mkdtempSync(join(tmpdir(), 'watchpup-goalbar-')), 'goals.json')
-    writeFileSync(path, JSON.stringify({ settings: { reminderListIdentifier: 'L1', reminderListTitle: '업무', reminderListSourceTitle: 'iCloud' } }))
-    expect(readGoalBarReminderPreference(path)).toEqual({ id: 'L1', name: '업무', account: 'iCloud' })
   })
 })

@@ -29,7 +29,7 @@ import { LocalAgentPoller, type ActivityHistoryRange } from '../src/core/activit
 import { mergeActivities, slackActivities } from '../src/core/activity/merge.js'
 import { activityTarget } from './activity-link.js'
 import { resolveWatchpupConfigPath } from '../src/core/config/path.js'
-import { ReminderGateway, readGoalBarReminderPreference } from './reminders.js'
+import { ReminderGateway } from './reminders.js'
 import { WorkStatusService } from './work-status.js'
 
 let pet: BrowserWindow | null = null
@@ -97,10 +97,7 @@ async function main(): Promise<void> {
   ipcMain.handle(CMD.workLists, async () => {
     const lists = await reminders.lists()
     const current = configStore.get()
-    const goalBar = readGoalBarReminderPreference()
     const selected = lists.find((list) => list.id === current.reminderListId)
-      ?? lists.find((list) => list.id === goalBar?.id)
-      ?? lists.find((list) => list.name === goalBar?.name && (!goalBar.account || list.account === goalBar.account))
       ?? lists[0]
     if (selected && selected.id !== current.reminderListId) {
       deps.config = configStore.update({
@@ -109,7 +106,7 @@ async function main(): Promise<void> {
         reminderAccountName: selected.account,
       })
     }
-    return { lists, selectedId: selected?.id ?? '', goalBarMatched: Boolean(selected && goalBar && (selected.id === goalBar.id || (selected.name === goalBar.name && selected.account === goalBar.account))) }
+    return { lists, selectedId: selected?.id ?? '' }
   })
   ipcMain.handle(CMD.workItems, async (_e, args: { listId?: string; includeCompleted?: boolean } = {}) => {
     const current = configStore.get()

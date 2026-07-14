@@ -259,7 +259,7 @@ export async function initWorkView() {
       hintEl.textContent = '사용 가능한 Reminder 목록이 없습니다.'
       return
     }
-    hintEl.textContent = result.goalBarMatched ? 'GoalBar에서 사용하던 Reminder 목록을 불러왔습니다.' : '사용할 Reminder 목록을 선택해주세요.'
+    hintEl.textContent = 'Watchpup에서 사용할 Reminder 목록을 선택할 수 있습니다.'
     await refreshWorkView()
   } catch (error) {
     hintEl.textContent = error?.message || 'Reminder 목록을 읽지 못했습니다.'

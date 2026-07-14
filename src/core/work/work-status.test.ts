@@ -29,11 +29,36 @@ describe('WorkStatusService', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  it('uses the Atlassian gateway for a scoped Jira API token', async () => {
+    const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (url === 'https://example.atlassian.net/rest/api/3/myself') return new Response('', { status: 401 })
+      if (url === 'https://example.atlassian.net/_edge/tenant_info') {
+        return new Response(JSON.stringify({ cloudId: 'cloud-123' }), { status: 200 })
+      }
+      if (url === 'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/myself') {
+        return new Response(JSON.stringify({ accountId: 'me' }), { status: 200 })
+      }
+      if (url.endsWith('/transitions')) return new Response(JSON.stringify({ transitions: [] }), { status: 200 })
+      return new Response(JSON.stringify({ fields: { summary: 'Scoped token issue', status: { name: '진행 중' } } }), { status: 200 })
+    })
+    const service = new WorkStatusService(configStore(), { get: async () => 'scoped-secret' } as any, vi.fn(), fetcher)
+
+    const status = await service.status('https://example.atlassian.net/browse/APP-123')
+
+    expect(status).toMatchObject({ kind: 'jira', title: 'Scoped token issue', status: '진행 중' })
+    expect(fetcher.mock.calls.some(([url]) => String(url).startsWith('https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/'))).toBe(true)
+    expect(fetcher.mock.calls.find(([url]) => url === 'https://example.atlassian.net/_edge/tenant_info')?.[1]?.headers)
+      .not.toHaveProperty('Authorization')
+  })
+
   it('reports expired Jira credentials before requesting an issue', async () => {
-    const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => new Response('', { status: 401 }))
+    const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (url.endsWith('/_edge/tenant_info')) return new Response(JSON.stringify({ cloudId: 'cloud-123' }), { status: 200 })
+      return new Response('', { status: 401 })
+    })
     const service = new WorkStatusService(configStore(), { get: async () => 'expired' } as any, vi.fn(), fetcher)
     await expect(service.status('https://example.atlassian.net/browse/APP-123')).rejects.toThrow('Jira 인증이 만료되었습니다')
-    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher).toHaveBeenCalledTimes(3)
     expect(fetcher.mock.calls[0][0]).toContain('/rest/api/3/myself')
   })
 

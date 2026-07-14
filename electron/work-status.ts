@@ -48,6 +48,7 @@ function configuredJira(configStore: ConfigStore): { host: string; email: string
 export class WorkStatusService {
   private jiraAuthVerifiedAt = 0
   private jiraAuthPromise: Promise<void> | null = null
+  private jiraApiBaseUrl: string | null = null
 
   constructor(
     private readonly configStore: ConfigStore,
@@ -59,6 +60,7 @@ export class WorkStatusService {
   resetJiraAuth(): void {
     this.jiraAuthVerifiedAt = 0
     this.jiraAuthPromise = null
+    this.jiraApiBaseUrl = null
   }
 
   async jiraConnectionStatus(): Promise<{ authenticated: boolean; error?: string }> {
@@ -114,7 +116,7 @@ export class WorkStatusService {
     const token = await this.keychain.get(JIRA_KEY)
     if (!token) throw new Error('Jira API 토큰을 Keychain에서 찾지 못했습니다.')
     if (verifyAuth) await this.ensureJiraAuthenticated(site)
-    const response = await this.fetcher(`${target.origin}${path}`, {
+    const response = await this.fetcher(`${this.jiraApiBaseUrl ?? target.origin}${path}`, {
       ...init,
       headers: {
         Accept: 'application/json',
@@ -141,11 +143,58 @@ export class WorkStatusService {
   private async ensureJiraAuthenticated(site: string): Promise<void> {
     if (Date.now() - this.jiraAuthVerifiedAt < 5 * 60_000) return
     if (!this.jiraAuthPromise) {
-      this.jiraAuthPromise = this.jiraRequest(site, '/rest/api/3/myself', {}, false)
-        .then(() => { this.jiraAuthVerifiedAt = Date.now() })
+      this.jiraAuthPromise = this.resolveJiraApiBaseUrl(site)
+        .then((baseUrl) => {
+          this.jiraApiBaseUrl = baseUrl
+          this.jiraAuthVerifiedAt = Date.now()
+        })
         .finally(() => { this.jiraAuthPromise = null })
     }
     await this.jiraAuthPromise
+  }
+
+  private async resolveJiraApiBaseUrl(site: string): Promise<string> {
+    const configured = configuredJira(this.configStore)
+    if (!configured) throw new Error('설정에서 Jira를 먼저 연결해주세요.')
+    const token = await this.keychain.get(JIRA_KEY)
+    if (!token) throw new Error('Jira API 토큰을 Keychain에서 찾지 못했습니다.')
+
+    const target = new URL(site)
+    const authorization = `Basic ${Buffer.from(`${configured.email}:${token}`).toString('base64')}`
+    const siteResponse = await this.fetchJiraAuthCheck(`${target.origin}/rest/api/3/myself`, authorization)
+    if (siteResponse.ok) return target.origin
+
+    const cloudId = await this.jiraCloudId(target.origin)
+    if (cloudId) {
+      const gateway = `https://api.atlassian.com/ex/jira/${encodeURIComponent(cloudId)}`
+      const gatewayResponse = await this.fetchJiraAuthCheck(`${gateway}/rest/api/3/myself`, authorization)
+      if (gatewayResponse.ok) return gateway
+    }
+
+    this.jiraAuthVerifiedAt = 0
+    this.jiraApiBaseUrl = null
+    throw new Error('Jira 인증이 만료되었습니다. 설정에서 이메일과 API 토큰으로 Jira를 다시 연결해주세요.')
+  }
+
+  private async fetchJiraAuthCheck(url: string, authorization: string): Promise<Response> {
+    return this.fetcher(url, {
+      headers: { Accept: 'application/json', Authorization: authorization },
+      signal: AbortSignal.timeout(20_000),
+    })
+  }
+
+  private async jiraCloudId(siteOrigin: string): Promise<string | null> {
+    try {
+      const response = await this.fetcher(`${siteOrigin}/_edge/tenant_info`, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(20_000),
+      })
+      if (!response.ok) return null
+      const body = await response.json() as Record<string, unknown>
+      return typeof body.cloudId === 'string' && body.cloudId.trim() ? body.cloudId.trim() : null
+    } catch {
+      return null
+    }
   }
 
   private async jiraErrorDetail(response: Response): Promise<string> {

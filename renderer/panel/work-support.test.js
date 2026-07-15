@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWorkPrompt, sortWorkItems, userNoteContent } from './work-support.js'
+import { buildWorkPrompt, sameWorkItems, sortWorkItems, userNoteContent } from './work-support.js'
 
 describe('Work support', () => {
   const items = [
@@ -24,6 +24,11 @@ describe('Work support', () => {
       { id: 'P', title: 'Parent' },
     ]
     expect(sortWorkItems(rows, 'titleAscending').map((item) => item.id)).toEqual(['P', 'C', 'Z'])
+  })
+
+  it('백그라운드 갱신에서 실제 데이터 변경을 구분한다', () => {
+    expect(sameWorkItems(items, structuredClone(items))).toBe(true)
+    expect(sameWorkItems(items, [{ ...items[0], title: 'Changed' }, items[1]])).toBe(false)
   })
 
   it('Reminder 식별자와 링크가 포함된 Codex 프롬프트를 만든다', () => {

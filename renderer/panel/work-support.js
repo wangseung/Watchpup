@@ -4,6 +4,10 @@ export function userNoteContent(notes = '') {
   return notes.match(USER_NOTE)?.[1]?.trim() || ''
 }
 
+export function sameWorkItems(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
 function compareTitle(left, right) {
   return String(left.title || '').localeCompare(String(right.title || ''), 'ko', { sensitivity: 'base' })
 }

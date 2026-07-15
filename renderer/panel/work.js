@@ -1,5 +1,5 @@
 import { copyToClipboard } from './richtext.js'
-import { buildWorkPrompt, sortWorkItems, userNoteContent } from './work-support.js'
+import { buildWorkPrompt, sameWorkItems, sortWorkItems, userNoteContent } from './work-support.js'
 
 const KIND_LABEL = { jira: 'Jira', github: 'GitHub', slack: 'Slack', notion: 'Notion', figma: 'Figma', web: 'Web' }
 const state = { items: [], selectedId: '', query: '', kind: '', includeCompleted: false, loading: false, sort: 'dueDateThenTitle', manualOrder: [], dragId: '' }
@@ -388,26 +388,35 @@ function selectItem(id) {
 
 export async function refreshWorkView(options = {}) {
   if (!listSelect?.value) return
+  const silent = options.silent === true
   state.loading = true
-  hintEl.textContent = ''
-  renderList()
-  try {
-    state.items = await window.watchpup.workItems(listSelect.value, state.includeCompleted)
-    if (!options.preserveSelection || !state.items.some((item) => item.id === state.selectedId)) {
-      state.selectedId = state.items[0]?.id || ''
-    }
+  if (!silent) {
+    hintEl.textContent = ''
     renderList()
-    renderDetail()
+  }
+  try {
+    const nextItems = await window.watchpup.workItems(listSelect.value, state.includeCompleted)
+    const itemsChanged = !sameWorkItems(state.items, nextItems)
+    const previousSelectedId = state.selectedId
+    state.items = nextItems
+    if (!options.preserveSelection || !nextItems.some((item) => item.id === state.selectedId)) {
+      state.selectedId = nextItems[0]?.id || ''
+    }
+    state.loading = false
+    if (!silent || itemsChanged || previousSelectedId !== state.selectedId) {
+      renderList()
+      renderDetail()
+    }
     hintEl.textContent = `${state.items.length}개 작업 · Apple Reminders와 동기화`
   } catch (error) {
-    state.items = []
-    state.selectedId = ''
-    renderList()
-    renderEmpty()
-    hintEl.textContent = error?.message || 'Reminder를 읽지 못했습니다. macOS 권한을 확인해주세요.'
-  } finally {
     state.loading = false
-    renderList()
+    if (!silent) {
+      state.items = []
+      state.selectedId = ''
+      renderList()
+      renderEmpty()
+    }
+    hintEl.textContent = error?.message || 'Reminder를 읽지 못했습니다. macOS 권한을 확인해주세요.'
   }
 }
 
@@ -513,7 +522,9 @@ document.getElementById('work-show-completed')?.addEventListener('change', async
 
 setInterval(() => {
   const view = document.getElementById('work-view')
-  if (view?.classList.contains('active') && listSelect?.value && !state.loading) {
-    void refreshWorkView({ preserveSelection: true })
+  const active = document.activeElement
+  const isEditing = view?.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active?.tagName)
+  if (view?.classList.contains('active') && listSelect?.value && !state.loading && !isEditing) {
+    void refreshWorkView({ preserveSelection: true, silent: true })
   }
 }, 10_000)

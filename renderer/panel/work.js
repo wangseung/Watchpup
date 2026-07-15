@@ -10,7 +10,6 @@ const detailEl = document.getElementById('work-detail')
 const hintEl = document.getElementById('work-source-hint')
 const createForm = document.getElementById('work-create-form')
 const createTitle = document.getElementById('work-create-title')
-const createNotes = document.getElementById('work-create-notes')
 
 function el(tag, className, text) {
   const node = document.createElement(tag)
@@ -205,10 +204,10 @@ function renderDetail() {
   const notesSection = el('section', 'work-section')
   const noteHead = el('div', 'work-note-actions')
   noteHead.append(el('h2', '', '메모'))
-  const editNote = el('button', '', '편집')
+  const note = userNoteContent(item.notes)
+  const editNote = el('button', '', note ? '편집' : '메모 추가')
   editNote.type = 'button'
   noteHead.append(editNote)
-  const note = userNoteContent(item.notes)
   const noteBody = el('div', `work-notes${note ? '' : ' empty-note'}`, note || '메모가 없습니다.')
   editNote.addEventListener('click', () => renderNoteEditor(notesSection, item, note))
   notesSection.append(noteHead, noteBody)
@@ -464,29 +463,21 @@ listSelect?.addEventListener('change', async () => {
   state.selectedId = ''
   await refreshWorkView()
 })
-document.getElementById('work-add-toggle')?.addEventListener('click', () => {
+createForm?.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const submit = createForm.querySelector('button[type="submit"]')
   if (!listSelect?.value) {
     hintEl.textContent = '작업을 추가할 Reminder 목록을 먼저 선택해주세요.'
     return
   }
-  createForm?.classList.remove('hidden')
-  createTitle?.focus()
-})
-document.getElementById('work-create-cancel')?.addEventListener('click', () => {
-  createForm?.classList.add('hidden')
-  createForm?.reset()
-})
-createForm?.addEventListener('submit', async (event) => {
-  event.preventDefault()
-  const submit = createForm.querySelector('button[type="submit"]')
-  if (!listSelect?.value || !createTitle?.value.trim()) return
+  if (!createTitle?.value.trim()) return
   submit.disabled = true
   try {
-    const created = await window.watchpup.workReminderCreate(listSelect.value, createTitle.value, createNotes?.value || '')
+    const created = await window.watchpup.workReminderCreate(listSelect.value, createTitle.value, '')
     createForm.reset()
-    createForm.classList.add('hidden')
     state.selectedId = created.id
     await refreshWorkView({ preserveSelection: true })
+    createTitle.focus()
   } catch (error) {
     hintEl.textContent = error?.message || '작업을 추가하지 못했습니다.'
   } finally {

@@ -1687,13 +1687,13 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 /* ---------- Work: Apple Reminders + 업무 링크 ---------- */
 #work-view { overflow: hidden; }
 #work-list-col {
-  flex: 0 0 32%; min-width: 240px; max-width: 460px;
+  flex: 0 0 38%; min-width: 320px; max-width: 620px;
   display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--border);
 }
 #work-tools {
   flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--sp-2);
-  padding: var(--sp-3); border-bottom: 1px solid var(--border);
+  padding: 10px var(--sp-3) 8px; border-bottom: 1px solid var(--border);
 }
 .work-list-picker { display: flex; gap: 6px; }
 .work-list-picker select { flex: 1 1 auto; min-width: 0; }
@@ -1706,30 +1706,30 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-link-form select:focus, .work-link-form input:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
 }
-#work-refresh, #work-add-toggle, #work-open-reminders {
+#work-refresh, #work-open-reminders {
   flex: 0 0 32px; border: 1px solid var(--border); border-radius: var(--r-2);
   background: var(--bg-elev); color: var(--fg-muted); cursor: pointer; font-size: 16px;
 }
-#work-refresh:hover, #work-add-toggle:hover, #work-open-reminders:hover { color: var(--accent-strong); border-color: var(--accent); }
+#work-refresh:hover, #work-open-reminders:hover { color: var(--accent-strong); border-color: var(--accent); }
 #work-create-form {
-  display: flex; flex-direction: column; gap: 6px; padding: 8px;
-  border: 1px solid var(--border); border-radius: var(--r-2); background: var(--bg-sunken);
+  flex: 0 0 auto; display: flex; gap: 7px; padding: 9px var(--sp-3) 11px;
+  border-top: 1px solid var(--border); background: var(--bg);
 }
-#work-create-form input, #work-create-form textarea {
-  width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--r-2);
-  padding: 7px 9px; background: var(--bg-elev); color: var(--fg); font: inherit; font-size: 12px;
+#work-create-form input {
+  flex: 1 1 auto; min-width: 0; box-sizing: border-box; border: 1px solid var(--border);
+  border-radius: 999px; padding: 8px 12px; background: var(--bg-elev); color: var(--fg);
+  font: inherit; font-size: 12px;
 }
-#work-create-form textarea { resize: vertical; min-height: 48px; max-height: 120px; }
-#work-create-form input:focus, #work-create-form textarea:focus {
+#work-create-form input:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
 }
-.work-create-actions { display: flex; justify-content: flex-end; gap: 6px; }
-.work-create-actions button { padding: 5px 10px; font-size: 11px; }
-.work-sort-row { display: flex; gap: 6px; }
-.work-sort-row select { flex: 1 1 auto; min-width: 0; }
+#work-create-form button {
+  flex: 0 0 auto; min-width: 50px; border-radius: 999px; padding: 7px 12px;
+  font-size: 11px; font-weight: 700;
+}
 #work-sort-reset { flex: 0 0 32px; padding: 0; }
 .work-filter-row { display: flex; align-items: center; gap: var(--sp-2); }
-.work-filter-row select { flex: 1 1 auto; min-width: 0; }
+.work-filter-row select { flex: 1 1 0; min-width: 0; }
 .work-filter-row label {
   display: flex; align-items: center; gap: 5px; white-space: nowrap;
   color: var(--fg-muted); font-size: 11px; cursor: pointer;
@@ -1862,7 +1862,9 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-status-controls button:disabled { opacity: .55; cursor: wait; }
 
 @media (max-width: 760px) {
-  #work-list-col { flex-basis: 42%; min-width: 210px; }
+  #work-list-col { flex-basis: 46%; min-width: 260px; }
+  .work-filter-row { flex-wrap: wrap; }
+  .work-filter-row select { flex-basis: calc(50% - 4px); }
   .work-link-form { grid-template-columns: 80px 1fr auto; }
   .work-link-form input[type="text"] { display: none; }
   .work-link-row { align-items: flex-start; flex-wrap: wrap; }

@@ -3,6 +3,7 @@
 import { playbooks, playbookById } from './playbooks.js'
 import { lessonKeyLabel } from './format.js'
 import { copyToClipboard } from './richtext.js'
+import { modelOptionsWithCurrent } from './model-options.js'
 
 // Slack 봇 생성용 앱 매니페스트 (From an app manifest 에 붙여넣기).
 // scope는 코드가 실제 호출하는 API에 맞춤: conversations.replies/info, chat.postMessage,
@@ -184,7 +185,16 @@ async function loadSettings() {
   settingsForm.elements['obsidian.vaultPath'].value = cfg.obsidian?.vaultPath || ''
   settingsForm.elements['obsidian.folder'].value = cfg.obsidian?.folder || ''
   updateObsidianHint()
-  settingsForm.elements['model'].value = cfg.model || ''
+  const modelSelect = settingsForm.elements['model']
+  const modelState = modelOptionsWithCurrent(cfg.model)
+  modelSelect.replaceChildren(...modelState.options.map(({ value, label, custom }) => {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = label
+    if (custom) option.dataset.custom = 'true'
+    return option
+  }))
+  modelSelect.value = modelState.selected
   await refreshTokenStatus()
   await renderGroups()
   await renderRepos()

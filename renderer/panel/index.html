@@ -263,8 +263,9 @@
               <p class="petimg-hint">각 스레드를 재검사해, 실제로 나(또는 내 그룹)를 멘션하지 않은 항목(예: GitHub의 평문 @org/repo 오탐)을 제거합니다. 확인 못 한 건 보존.</p>
             </fieldset>
             <label>
-              모델
-              <input type="text" name="model" placeholder="opus" autocomplete="off" />
+              Claude 모델
+              <select name="model" aria-describedby="model-hint"></select>
+              <span id="model-hint" class="field-hint">Claude Code의 최신 모델 별칭입니다. 계정·플랜에 따라 사용 가능 여부가 다를 수 있어요.</span>
             </label>
           </div>
 

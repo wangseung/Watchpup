@@ -646,6 +646,8 @@ body.col-resizing #agent-list-divider::before {
   text-decoration: none;
 }
 .permalink:hover { text-decoration: underline; }
+.permalink.disabled { opacity: 0.5; cursor: default; pointer-events: none; }
+.permalink-row { display: flex; align-items: center; gap: var(--sp-2); }
 
 /* 상태 pill */
 .status-pill {

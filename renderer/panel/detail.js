@@ -209,6 +209,8 @@ function renderDetail(m) {
     readState.textContent = '안 읽음'
   }
   head.append(readState)
+  const linkRow = document.createElement('div')
+  linkRow.className = 'permalink-row'
   if (m.permalink) {
     const link = document.createElement('a')
     link.className = 'permalink'
@@ -218,8 +220,25 @@ function renderDetail(m) {
       e.preventDefault()
       window.watchpup.openExternal(m.permalink)
     })
-    head.append(link)
+    linkRow.append(link)
   }
+  const copyMsgBtn = document.createElement('a')
+  copyMsgBtn.className = 'permalink'
+  copyMsgBtn.href = '#'
+  copyMsgBtn.textContent = '링크 복사하기'
+  if (!m.permalink) copyMsgBtn.classList.add('disabled')
+  copyMsgBtn.addEventListener('click', async (e) => {
+    e.preventDefault()
+    if (!m.permalink) return
+    await copyToClipboard(m.permalink)
+    const original = copyMsgBtn.textContent
+    copyMsgBtn.textContent = '복사됨'
+    setTimeout(() => {
+      if (copyMsgBtn.textContent === '복사됨') copyMsgBtn.textContent = original
+    }, 1500)
+  })
+  linkRow.append(copyMsgBtn)
+  head.append(linkRow)
   detailEl.appendChild(head)
 
   // 두 개의 패널: 좌측 = 슬랙식 스레드 대화, 우측 = watchpup 코파일럿(요약/조언/할일/답장/액션/대화)

@@ -119,8 +119,17 @@
           <div id="work-tools">
             <div class="work-list-picker">
               <select id="work-list-select" aria-label="Reminder 목록"></select>
+              <button type="button" id="work-add-toggle" title="작업 추가" aria-label="작업 추가">＋</button>
               <button type="button" id="work-refresh" title="새로고침" aria-label="새로고침">↻</button>
             </div>
+            <form id="work-create-form" class="hidden">
+              <input id="work-create-title" type="text" placeholder="새 작업 제목" autocomplete="off" required />
+              <textarea id="work-create-notes" placeholder="메모 (선택)" rows="2"></textarea>
+              <div class="work-create-actions">
+                <button type="button" id="work-create-cancel">취소</button>
+                <button type="submit" class="primary">추가</button>
+              </div>
+            </form>
             <input id="work-search" type="search" placeholder="작업·메모 검색" autocomplete="off" />
             <div class="work-filter-row">
               <select id="work-kind-filter" aria-label="링크 종류 필터">

@@ -7,6 +7,9 @@ const listSelect = document.getElementById('work-list-select')
 const listEl = document.getElementById('work-list')
 const detailEl = document.getElementById('work-detail')
 const hintEl = document.getElementById('work-source-hint')
+const createForm = document.getElementById('work-create-form')
+const createTitle = document.getElementById('work-create-title')
+const createNotes = document.getElementById('work-create-notes')
 
 function el(tag, className, text) {
   const node = document.createElement(tag)
@@ -278,6 +281,35 @@ listSelect?.addEventListener('change', async () => {
   await window.watchpup.workListSelect(listSelect.value)
   state.selectedId = ''
   await refreshWorkView()
+})
+document.getElementById('work-add-toggle')?.addEventListener('click', () => {
+  if (!listSelect?.value) {
+    hintEl.textContent = '작업을 추가할 Reminder 목록을 먼저 선택해주세요.'
+    return
+  }
+  createForm?.classList.remove('hidden')
+  createTitle?.focus()
+})
+document.getElementById('work-create-cancel')?.addEventListener('click', () => {
+  createForm?.classList.add('hidden')
+  createForm?.reset()
+})
+createForm?.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  const submit = createForm.querySelector('button[type="submit"]')
+  if (!listSelect?.value || !createTitle?.value.trim()) return
+  submit.disabled = true
+  try {
+    const created = await window.watchpup.workReminderCreate(listSelect.value, createTitle.value, createNotes?.value || '')
+    createForm.reset()
+    createForm.classList.add('hidden')
+    state.selectedId = created.id
+    await refreshWorkView({ preserveSelection: true })
+  } catch (error) {
+    hintEl.textContent = error?.message || '작업을 추가하지 못했습니다.'
+  } finally {
+    submit.disabled = false
+  }
 })
 document.getElementById('work-refresh')?.addEventListener('click', () => refreshWorkView({ preserveSelection: true }))
 document.getElementById('work-search')?.addEventListener('input', (event) => {

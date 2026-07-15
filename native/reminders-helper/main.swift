@@ -109,6 +109,27 @@ struct WatchpupRemindersHelper {
             try store.save(reminder, commit: true)
             return ["ok": true]
 
+        case "create":
+            guard arguments.count >= 3 else {
+                throw HelperError.invalidArguments("create에는 목록 ID와 제목이 필요합니다.")
+            }
+            guard let calendar = store.calendar(withIdentifier: arguments[1]) else {
+                throw HelperError.listNotFound
+            }
+            let title = arguments[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else {
+                throw HelperError.invalidArguments("작업 제목을 입력해주세요.")
+            }
+            let reminder = EKReminder(eventStore: store)
+            reminder.calendar = calendar
+            reminder.title = title
+            if arguments.count >= 4 {
+                let notes = arguments[3].trimmingCharacters(in: .whitespacesAndNewlines)
+                reminder.notes = notes.isEmpty ? nil : notes
+            }
+            try store.save(reminder, commit: true)
+            return ["ok": true, "id": reminder.calendarItemIdentifier]
+
         case "append-link":
             guard arguments.count >= 4 else {
                 throw HelperError.invalidArguments("append-link에는 항목 ID, 이름, URL이 필요합니다.")

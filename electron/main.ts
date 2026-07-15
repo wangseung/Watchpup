@@ -119,6 +119,12 @@ async function main(): Promise<void> {
     })
     return selected
   })
+  ipcMain.handle(CMD.workReminderCreate, async (_e, args: { listId: string; title: string; notes?: string }) => {
+    const list = (await reminders.lists()).find((candidate) => candidate.id === args.listId)
+    if (!list) throw new Error('선택한 Reminder 목록을 찾지 못했습니다.')
+    const id = await reminders.create(list.id, args.title, args.notes)
+    return { id }
+  })
   ipcMain.handle(CMD.workReminderComplete, async (_e, args: { reminderId: string; completed: boolean }) => {
     await reminders.setCompleted(args.reminderId, args.completed)
     return { ok: true }

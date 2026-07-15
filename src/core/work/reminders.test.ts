@@ -17,12 +17,21 @@ describe('ReminderGateway', () => {
     expect(runner).toHaveBeenNthCalledWith(2, 'tasks', ['L1', 'false'])
   })
 
-  it('완료 변경과 링크 추가를 native helper 명령으로 전달한다', async () => {
-    const runner = vi.fn(async () => '{"ok":true}')
+  it('작업 생성, 완료 변경과 링크 추가를 native helper 명령으로 전달한다', async () => {
+    const runner = vi.fn(async (command) => command === 'create' ? '{"ok":true,"id":"R2"}' : '{"ok":true}')
     const gateway = new ReminderGateway(runner)
+    await expect(gateway.create('L1', ' 새 작업 ', ' 메모 ')).resolves.toBe('R2')
     await gateway.setCompleted('R1', true)
     await gateway.appendLink('R1', 'Jira', 'https://example.atlassian.net/browse/APP-1')
-    expect(runner).toHaveBeenNthCalledWith(1, 'set-completed', ['R1', 'true'])
-    expect(runner).toHaveBeenNthCalledWith(2, 'append-link', ['R1', 'Jira', 'https://example.atlassian.net/browse/APP-1'])
+    expect(runner).toHaveBeenNthCalledWith(1, 'create', ['L1', '새 작업', '메모'])
+    expect(runner).toHaveBeenNthCalledWith(2, 'set-completed', ['R1', 'true'])
+    expect(runner).toHaveBeenNthCalledWith(3, 'append-link', ['R1', 'Jira', 'https://example.atlassian.net/browse/APP-1'])
+  })
+
+  it('빈 제목의 작업은 생성하지 않는다', async () => {
+    const runner = vi.fn()
+    const gateway = new ReminderGateway(runner)
+    await expect(gateway.create('L1', '   ')).rejects.toThrow('작업 제목')
+    expect(runner).not.toHaveBeenCalled()
   })
 })

@@ -1696,11 +1696,25 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-link-form select:focus, .work-link-form input:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
 }
-#work-refresh {
+#work-refresh, #work-add-toggle {
   flex: 0 0 32px; border: 1px solid var(--border); border-radius: var(--r-2);
   background: var(--bg-elev); color: var(--fg-muted); cursor: pointer; font-size: 16px;
 }
-#work-refresh:hover { color: var(--accent-strong); border-color: var(--accent); }
+#work-refresh:hover, #work-add-toggle:hover { color: var(--accent-strong); border-color: var(--accent); }
+#work-create-form {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  border: 1px solid var(--border); border-radius: var(--r-2); background: var(--bg-sunken);
+}
+#work-create-form input, #work-create-form textarea {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--r-2);
+  padding: 7px 9px; background: var(--bg-elev); color: var(--fg); font: inherit; font-size: 12px;
+}
+#work-create-form textarea { resize: vertical; min-height: 48px; max-height: 120px; }
+#work-create-form input:focus, #work-create-form textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.work-create-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.work-create-actions button { padding: 5px 10px; font-size: 11px; }
 .work-filter-row { display: flex; align-items: center; gap: var(--sp-2); }
 .work-filter-row select { flex: 1 1 auto; min-width: 0; }
 .work-filter-row label {

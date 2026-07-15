@@ -20,6 +20,7 @@ export const CMD = {
   workLists: 'work.lists',
   workItems: 'work.items',
   workListSelect: 'work.list.select',
+  workReminderCreate: 'work.reminder.create',
   workReminderComplete: 'work.reminder.complete',
   workReminderLinkAdd: 'work.reminder.link.add',
   workLinkStatus: 'work.link.status',

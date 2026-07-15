@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('watchpup', {
   workLists: () => ipcRenderer.invoke(CMD.workLists),
   workItems: (listId?: string, includeCompleted = false) => ipcRenderer.invoke(CMD.workItems, { listId, includeCompleted }),
   workListSelect: (listId: string) => ipcRenderer.invoke(CMD.workListSelect, listId),
+  workReminderCreate: (listId: string, title: string, notes = '') =>
+    ipcRenderer.invoke(CMD.workReminderCreate, { listId, title, notes }),
   workReminderComplete: (reminderId: string, completed: boolean) =>
     ipcRenderer.invoke(CMD.workReminderComplete, { reminderId, completed }),
   workReminderLinkAdd: (reminderId: string, link: { kind: string; title: string; url: string }) =>

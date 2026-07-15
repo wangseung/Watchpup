@@ -379,10 +379,17 @@ function renderNoteEditor(section, item, note) {
   })
 }
 
-function selectItem(id) {
+function selectItem(id, options = {}) {
   state.selectedId = id
   renderList()
   renderDetail()
+  if (options.touch !== false) window.watchpup.workItemTouch?.(id).catch(() => {})
+}
+
+export async function focusWorkItem(id) {
+  if (!id || !listSelect?.value) return
+  await refreshWorkView({ preserveSelection: true, silent: true })
+  if (state.items.some((item) => item.id === id)) selectItem(id)
 }
 
 export async function refreshWorkView(options = {}) {

@@ -1380,6 +1380,23 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); 
 }
 .status { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-faint); font-weight: 400; }
 
+.beta-badge {
+  display: inline-flex; margin-left: 5px; padding: 2px 6px;
+  border: 1px solid var(--accent); border-radius: 999px;
+  color: var(--accent-strong); font-size: 8px; letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+#settings-form .nagging-toggle { font-size: 14px; font-weight: 700; }
+.nagging-copy { margin: 0; max-width: 620px; color: var(--fg-muted); font-size: 12px; line-height: 1.6; }
+.nagging-interval-row { display: flex; align-items: flex-end; gap: var(--sp-3); max-width: 360px; }
+.nagging-interval-row > label { flex: 1 1 0; }
+.nagging-range-mark { flex: 0 0 auto; padding-bottom: 9px; color: var(--fg-faint); }
+.nagging-number { display: flex; align-items: center; gap: 7px; }
+#settings-form .nagging-number input[type="number"] { max-width: none; }
+.nagging-number > span { color: var(--fg-faint); font-size: 11px; font-weight: 500; }
+.nagging-card.is-disabled .nagging-interval-row,
+.nagging-card.is-disabled #nagging-hint { opacity: 0.45; }
+
 /* 저장 바 (sticky) */
 .actions {
   position: sticky; bottom: 0;

@@ -83,6 +83,10 @@ export const watchpupConfigSchema = z.object({
   hudAlignment: z.enum(['left', 'right']).default('right'),
   // 세션 HUD를 화면에 표시할지. 수집은 이 값과 무관하게 계속된다.
   showActivityHud: z.boolean().default(false),
+  // 베타: 선택한 Work 목록의 미완료 작업을 무작위 간격으로 말풍선에서 상기한다.
+  naggingEnabled: z.boolean().default(false),
+  naggingMinMinutes: z.number().int().min(1).max(120).default(5),
+  naggingMaxMinutes: z.number().int().min(1).max(120).default(12),
   // Work 탭에서 사용할 Apple Reminders 목록. Watchpup이 자체적으로 선택을 저장한다.
   reminderListId: z.string().default(''),
   reminderListName: z.string().default(''),

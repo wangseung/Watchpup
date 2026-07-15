@@ -1,5 +1,5 @@
 import { activityStateLabel, formatElapsed } from './activity-format.js'
-import { bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
+import { bubbleOpenTarget, bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
 
 const pet = document.getElementById('pet')
 const petImg = document.getElementById('pet-img')
@@ -454,17 +454,20 @@ function showBubble(text, hideAfterMs) {
 }
 
 let bubbleMentionId = null
+let bubbleWorkItemId = null
 window.watchpup.onBubble((payload) => {
-  // payload: string(구버전/idle) 또는 { text, mentionId }
+  // payload: string(구버전/idle) 또는 { text, mentionId, workItemId }
   const text = typeof payload === 'string' ? payload : payload && payload.text
   const id = typeof payload === 'object' && payload ? payload.mentionId : null
+  const workItemId = typeof payload === 'object' && payload ? payload.workItemId : null
   if (typeof text !== 'string' || !text) return
   if (chatStreaming) return
   bubbleMentionId = id || null
+  bubbleWorkItemId = workItemId || null
   bubble.classList.remove('streaming')
   hudMessage.classList.remove('streaming')
-  bubble.classList.toggle('clickable', !!bubbleMentionId)
-  hudMessage.classList.toggle('clickable', !!bubbleMentionId)
+  bubble.classList.toggle('clickable', !!bubbleMentionId || !!bubbleWorkItemId)
+  hudMessage.classList.toggle('clickable', !!bubbleMentionId || !!bubbleWorkItemId)
   showBubble(text, 30000)
 })
 
@@ -506,7 +509,9 @@ activityHud.addEventListener('click', (event) => {
 })
 // 말풍선 클릭 → 스레드가 연결돼 있으면 그 스레드를 열고, 아니면 패널을 연다.
 function openBubbleTarget() {
-  if (bubbleMentionId) window.watchpup.openMention(bubbleMentionId)
+  const target = bubbleOpenTarget(bubbleMentionId, bubbleWorkItemId)
+  if (target.kind === 'mention') window.watchpup.openMention(target.id)
+  else if (target.kind === 'work') window.watchpup.openWorkItem(target.id)
   else window.watchpup.showPanel()
   hideBubbleSurface()
 }

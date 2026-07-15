@@ -8,7 +8,7 @@ import { loadSettings, loadPlaybooks, showSset, setOnPlaybooksChanged } from './
 import { state, getChat, getActionLog, sortedMentions, nav } from './store.js'
 import { renderDigest, renderTodosView } from './views.js'
 import { renderActivityDetail, renderDetail } from './detail.js'
-import { initWorkView, refreshWorkView } from './work.js'
+import { focusWorkItem, initWorkView, refreshWorkView } from './work.js'
 import { normalizePanelTab, readPanelTab, writePanelTab } from './tab-state.js'
 
 // playbook 변경 시 열린 상세의 액션 버튼 갱신(settings→panel 결합을 훅으로만)
@@ -631,6 +631,9 @@ function ensureMentionsTab() {
 function ensureAgentTab() {
   ensureTab('agent')
 }
+function ensureWorkTab() {
+  ensureTab('work')
+}
 // HUD의 Claude/Codex 행 클릭 → Watchpup 내부 세션 상세
 if (window.watchpup.onActivityFocus) {
   window.watchpup.onActivityFocus((id) => {
@@ -671,6 +674,13 @@ if (window.watchpup.onMentionFocus) {
     refresh().then(() => {
       if (state.mentions.has(id)) select(id)
     }).catch(() => { if (state.mentions.has(id)) select(id) })
+  })
+}
+if (window.watchpup.onWorkFocus) {
+  window.watchpup.onWorkFocus((id) => {
+    if (typeof id !== 'string' || !id) return
+    ensureWorkTab()
+    focusWorkItem(id).catch(() => {})
   })
 }
 

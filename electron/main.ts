@@ -13,6 +13,7 @@ import { MentionStore } from '../src/core/state/mentions.js'
 import { LessonStore } from '../src/core/state/lessons.js'
 import { bubbleReady as bubbleReadyText, bubbleFollowup as bubbleFollowupText, bubbleAnalyzing as bubbleAnalyzingText, type BubbleStyle } from '../src/core/presentation/bubble.js'
 import { pickIdleLine } from '../src/core/presentation/idle.js'
+import { naggingLine, nextNaggingDelayMs, pickNaggingWorkItem } from '../src/core/presentation/nagging.js'
 import { WatchpupGateway } from '../src/core/slack/gateway.js'
 import { generateQuips } from '../src/core/watchpup/quips.js'
 import { parseSkillMd } from '../src/core/watchpup/skill-import.js'
@@ -149,6 +150,10 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(CMD.workReminderLinkAdd, async (_e, args: { reminderId: string; title: string; url: string }) => {
     await reminders.appendLink(args.reminderId, args.title, args.url)
+    return { ok: true }
+  })
+  ipcMain.handle(CMD.workItemTouch, (_e, reminderId: string) => {
+    if (typeof reminderId === 'string' && reminderId) state.touchWorkItem(reminderId)
     return { ok: true }
   })
   ipcMain.handle(CMD.workLinkStatus, (_e, url: string) => workStatus.status(url))
@@ -293,6 +298,12 @@ async function main(): Promise<void> {
     send(win, 'mention.focus', id)
   }
   ipcMain.on('pet.openMention', (_e, id: string) => openMentionPanel(id))
+  ipcMain.on('pet.openWorkItem', (_e, id: string) => {
+    const win = activePanel()
+    if (!win || typeof id !== 'string' || !id) return
+    activatePanel(win)
+    send(win, 'work.focus', id)
+  })
   ipcMain.handle(CMD.activityList, (_e, requestedRange?: ActivityHistoryRange) => {
     const range: ActivityHistoryRange = ['recent', 'today', '7d', 'all'].includes(requestedRange || '')
       ? requestedRange as ActivityHistoryRange
@@ -569,12 +580,55 @@ async function main(): Promise<void> {
   refillQuips() // 시작 시 한 배치 미리 생성
   setInterval(() => {
     if (!pet || pet.isDestroyed()) return
+    if (configStore.get().naggingEnabled) return
     if (activePanel()?.isVisible()) return
     if (Date.now() - lastActivity < IDLE_MS) return
     refillQuips() // 캐시 보충(비동기)
     send(pet, EVT.bubble, idleLine())
     lastActivity = Date.now() // 다음 혼잣말까지 간격 확보
   }, 4 * 60 * 1000)
+
+  // 베타 `잔소리`: 최근 열어본 Work 항목을 우선해 몇 분 단위의 랜덤 간격으로 상기한다.
+  // 다음 예정 시각을 상태에 저장해 앱 재실행 직후 말풍선이 몰리지 않게 한다.
+  let naggingTimer: NodeJS.Timeout | null = null
+  function scheduleNagging(reset = false): void {
+    if (naggingTimer) clearTimeout(naggingTimer)
+    naggingTimer = null
+    const current = configStore.get()
+    if (!current.naggingEnabled) {
+      state.setNagging({ nextAt: undefined })
+      return
+    }
+    const now = Date.now()
+    const savedNextAt = reset ? undefined : state.get().nagging?.nextAt
+    const nextAt = savedNextAt && savedNextAt > now
+      ? savedNextAt
+      : now + nextNaggingDelayMs(current.naggingMinMinutes, current.naggingMaxMinutes)
+    state.setNagging({ nextAt })
+    naggingTimer = setTimeout(() => { void runNagging() }, Math.max(1000, nextAt - now))
+  }
+
+  async function runNagging(): Promise<void> {
+    try {
+      const current = configStore.get()
+      if (!current.naggingEnabled || !pet || pet.isDestroyed()) return
+      const items = current.reminderListId
+        ? await reminders.tasks(current.reminderListId, false)
+        : []
+      if (!configStore.get().naggingEnabled) return
+      const previous = state.get().nagging?.lastTaskId ?? ''
+      const item = pickNaggingWorkItem(items, state.workTouchedAt(), previous)
+      if (item) state.setNagging({ lastTaskId: item.id })
+      send(pet, EVT.bubble, { text: naggingLine(item), workItemId: item?.id })
+      lastActivity = Date.now()
+    } catch (error) {
+      console.warn('잔소리 작업 조회 실패', error)
+    } finally {
+      scheduleNagging(true)
+    }
+  }
+
+  scheduleNagging()
 
   // 4) 감지원 부착: 봇(소켓) / 내 계정 검색 폴링 — config 플래그 + 토큰 존재 시
   const botToken = await keychain.get(SecretKeys.slackBotToken)
@@ -665,6 +719,9 @@ async function main(): Promise<void> {
     send(pet, EVT.petImages, petImagesFromDir(c.petImageDir))
     send(pet, EVT.petCodex, resolveCodexPet(c.petCodexDir))
     if (pet && !pet.isDestroyed()) pet.setAlwaysOnTop(c.petAlwaysOnTop) // 즉시 반영
+    if ('naggingEnabled' in patch || 'naggingMinMinutes' in patch || 'naggingMaxMinutes' in patch) {
+      scheduleNagging(true)
+    }
   })
   // 토큰: 존재 여부만 조회 / 값 저장은 Keychain에만 (설정 변경은 재시작 후 반영)
   ipcMain.handle(CMD.tokensGet, async (): Promise<TokensStatus> => ({

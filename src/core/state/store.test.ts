@@ -44,4 +44,13 @@ describe('StateStore', () => {
       { channel: 'C2', threadTs: '200.000002' },
     ])
   })
+  it('persists Work touch history and the next nagging schedule', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'watchpup-st-')), 'state.json')
+    const s = new StateStore(path)
+    s.touchWorkItem('work-1', 1_000_000)
+    s.setNagging({ nextAt: 2_000_000, lastTaskId: 'work-1' })
+    const restored = new StateStore(path)
+    expect(restored.workTouchedAt()).toEqual({ 'work-1': 1_000_000 })
+    expect(restored.get().nagging).toEqual({ nextAt: 2_000_000, lastTaskId: 'work-1' })
+  })
 })

@@ -134,6 +134,11 @@ const hudAlignmentField = document.getElementById('hud-alignment-field')
 const modelSelect = settingsForm.elements['model']
 const modelRefreshButton = document.getElementById('model-refresh')
 const modelHint = document.getElementById('model-hint')
+const naggingEnabledInput = settingsForm.elements['naggingEnabled']
+const naggingMinInput = settingsForm.elements['naggingMinMinutes']
+const naggingMaxInput = settingsForm.elements['naggingMaxMinutes']
+const naggingCard = document.querySelector('.nagging-card')
+const naggingHint = document.getElementById('nagging-hint')
 
 function renderModelOptions(current, available) {
   const modelState = modelOptionsWithCurrent(current, available)
@@ -191,10 +196,32 @@ function updateHudControls() {
   if (hudAlignmentField) hudAlignmentField.classList.toggle('is-disabled', !enabled)
 }
 
+function naggingMinutes(input, fallback) {
+  const value = parseInt(input?.value || '', 10)
+  return Number.isFinite(value) ? Math.max(1, Math.min(120, value)) : fallback
+}
+
+function updateNaggingControls() {
+  const enabled = !!naggingEnabledInput?.checked
+  if (naggingMinInput) naggingMinInput.disabled = !enabled
+  if (naggingMaxInput) naggingMaxInput.disabled = !enabled
+  naggingCard?.classList.toggle('is-disabled', !enabled)
+  const min = naggingMinutes(naggingMinInput, 5)
+  const max = Math.max(min, naggingMinutes(naggingMaxInput, 12))
+  if (naggingHint) {
+    naggingHint.textContent = enabled
+      ? `${min}~${max}분 사이의 랜덤한 시점에 미완료 작업을 말풍선으로 다시 꺼냅니다.`
+      : '현재 꺼져 있어요. 활성화해야 잔소리가 시작됩니다.'
+  }
+}
+
 if (petSizeInput) petSizeInput.addEventListener('input', updatePetSizeLabel)
 if (bubbleSizeInput) bubbleSizeInput.addEventListener('input', updateBubbleSizeLabel)
 if (hudSizeInput) hudSizeInput.addEventListener('input', updateHudSizeLabel)
 if (showActivityHudInput) showActivityHudInput.addEventListener('change', updateHudControls)
+if (naggingEnabledInput) naggingEnabledInput.addEventListener('change', updateNaggingControls)
+if (naggingMinInput) naggingMinInput.addEventListener('input', updateNaggingControls)
+if (naggingMaxInput) naggingMaxInput.addEventListener('input', updateNaggingControls)
 
 async function loadSettings() {
   const cfg = await window.watchpup.settingsGet()
@@ -207,10 +234,14 @@ async function loadSettings() {
   if (hudSizeInput) hudSizeInput.value = String(cfg.hudSizePercent ?? 100)
   if (hudAlignmentInput) hudAlignmentInput.value = cfg.hudAlignment === 'left' ? 'left' : 'right'
   if (showActivityHudInput) showActivityHudInput.checked = cfg.showActivityHud !== false
+  if (naggingEnabledInput) naggingEnabledInput.checked = cfg.naggingEnabled === true
+  if (naggingMinInput) naggingMinInput.value = String(cfg.naggingMinMinutes ?? 5)
+  if (naggingMaxInput) naggingMaxInput.value = String(cfg.naggingMaxMinutes ?? 12)
   updatePetSizeLabel()
   updateBubbleSizeLabel()
   updateHudSizeLabel()
   updateHudControls()
+  updateNaggingControls()
   if (settingsForm.elements['persona']) settingsForm.elements['persona'].value = cfg.persona || ''
   if (settingsForm.elements['bubbleStyle']) settingsForm.elements['bubbleStyle'].value = cfg.bubbleStyle || 'status'
   const petimgPathEl = document.getElementById('petimg-path')
@@ -594,6 +625,9 @@ settingsForm.addEventListener('submit', async (e) => {
     hudSizePercent: hudSizeInput ? parseInt(hudSizeInput.value, 10) : 100,
     hudAlignment: hudAlignmentInput?.value === 'left' ? 'left' : 'right',
     showActivityHud: showActivityHudInput ? showActivityHudInput.checked : true,
+    naggingEnabled: naggingEnabledInput ? naggingEnabledInput.checked : false,
+    naggingMinMinutes: naggingMinutes(naggingMinInput, 5),
+    naggingMaxMinutes: Math.max(naggingMinutes(naggingMinInput, 5), naggingMinutes(naggingMaxInput, 12)),
     persona: settingsForm.elements['persona'] ? settingsForm.elements['persona'].value.trim() : '',
     bubbleStyle: settingsForm.elements['bubbleStyle'] ? settingsForm.elements['bubbleStyle'].value : 'status',
     enableBot: settingsForm.elements['enableBot'].checked,

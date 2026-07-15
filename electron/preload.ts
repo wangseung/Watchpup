@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('watchpup', {
     ipcRenderer.invoke(CMD.workReminderComplete, { reminderId, completed }),
   workReminderLinkAdd: (reminderId: string, link: { kind: string; title: string; url: string }) =>
     ipcRenderer.invoke(CMD.workReminderLinkAdd, { reminderId, ...link }),
+  workItemTouch: (reminderId: string) => ipcRenderer.invoke(CMD.workItemTouch, reminderId),
   workLinkStatus: (url: string) => ipcRenderer.invoke(CMD.workLinkStatus, url),
   workLinkAction: (url: string, actionId: string) => ipcRenderer.invoke(CMD.workLinkAction, { url, actionId }),
   workRemindersOpen: () => ipcRenderer.invoke(CMD.workRemindersOpen),
@@ -117,6 +118,8 @@ contextBridge.exposeInMainWorld('watchpup', {
   maximizePanel: () => ipcRenderer.send('panel.maximize'),
   openMention: (id: string) => ipcRenderer.send('pet.openMention', id),
   onMentionFocus: (cb: (id: unknown) => void) => sub('mention.focus', cb),
+  onWorkFocus: (cb: (id: unknown) => void) => sub('work.focus', cb),
+  openWorkItem: (id: string) => ipcRenderer.send('pet.openWorkItem', id),
   setTracked: (mentionId: string, tracked: boolean) => ipcRenderer.invoke('mention.setTracked', { mentionId, tracked }),
   removeMention: (id: string) => ipcRenderer.invoke('mention.remove', id),
   cleanupFalseMentions: () => ipcRenderer.invoke('mention.cleanupFalse'),

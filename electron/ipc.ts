@@ -28,6 +28,7 @@ export const CMD = {
   workReminderNoteUpdate: 'work.reminder.note.update',
   workReminderComplete: 'work.reminder.complete',
   workReminderLinkAdd: 'work.reminder.link.add',
+  workItemTouch: 'work.item.touch',
   workLinkStatus: 'work.link.status',
   workLinkAction: 'work.link.action',
   workRemindersOpen: 'work.reminders.open',
@@ -106,6 +107,9 @@ export interface SettingsPatch {
   hudSizePercent?: number
   hudAlignment?: 'left' | 'right'
   showActivityHud?: boolean
+  naggingEnabled?: boolean
+  naggingMinMinutes?: number
+  naggingMaxMinutes?: number
   petImageDir?: string
   petCodexDir?: string
   persona?: string

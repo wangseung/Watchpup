@@ -18,3 +18,9 @@ export function hudFoldContent({ activityCount, folded }) {
     actionLabel: folded ? '펼치기' : '접기',
   }
 }
+
+export function bubbleOpenTarget(mentionId, workItemId) {
+  if (mentionId) return { kind: 'mention', id: mentionId }
+  if (workItemId) return { kind: 'work', id: workItemId }
+  return { kind: 'panel' }
+}

@@ -89,6 +89,8 @@ export const watchpupConfigSchema = z.object({
   reminderAccountName: z.string().default(''),
   reminderListSelectionExplicit: z.boolean().default(false),
   showCompletedReminders: z.boolean().default(false),
+  reminderTaskSortOrder: z.enum(['manual', 'dueDateThenTitle', 'createdNewest', 'updatedNewest', 'titleAscending']).default('dueDateThenTitle'),
+  reminderTaskManualOrder: z.array(z.string()).default([]),
   // 커스텀 펫 이미지 폴더(설정 시 이모지 대신 이미지 사용, 공모양 배경 제거).
   // 폴더에 idle/thinking/ready/chatting.(gif|png|apng|webp|jpg) 파일을 두면 상태별로 사용.
   petImageDir: z.string().default(''),

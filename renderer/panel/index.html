@@ -120,6 +120,7 @@
             <div class="work-list-picker">
               <select id="work-list-select" aria-label="Reminder 목록"></select>
               <button type="button" id="work-add-toggle" title="작업 추가" aria-label="작업 추가">＋</button>
+              <button type="button" id="work-open-reminders" title="Reminders 열기" aria-label="Reminders 열기">↗</button>
               <button type="button" id="work-refresh" title="새로고침" aria-label="새로고침">↻</button>
             </div>
             <form id="work-create-form" class="hidden">
@@ -143,6 +144,13 @@
               </select>
               <label><input type="checkbox" id="work-show-completed" /> 완료 포함</label>
             </div>
+            <select id="work-sort" aria-label="작업 정렬">
+              <option value="dueDateThenTitle">마감일순</option>
+              <option value="createdNewest">최근 생성순</option>
+              <option value="updatedNewest">최근 변경순</option>
+              <option value="titleAscending">제목순</option>
+              <option value="manual">수동 정렬</option>
+            </select>
             <div id="work-source-hint" role="status"></div>
           </div>
           <aside id="work-list" aria-label="통합 작업 목록"></aside>

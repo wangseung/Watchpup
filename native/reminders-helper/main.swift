@@ -130,6 +130,32 @@ struct WatchpupRemindersHelper {
             try store.save(reminder, commit: true)
             return ["ok": true, "id": reminder.calendarItemIdentifier]
 
+        case "update-title":
+            guard arguments.count >= 3 else {
+                throw HelperError.invalidArguments("update-title에는 항목 ID와 제목이 필요합니다.")
+            }
+            guard let reminder = store.calendarItem(withIdentifier: arguments[1]) as? EKReminder else {
+                throw HelperError.reminderNotFound
+            }
+            let title = arguments[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else {
+                throw HelperError.invalidArguments("작업 제목을 입력해주세요.")
+            }
+            reminder.title = title
+            try store.save(reminder, commit: true)
+            return ["ok": true]
+
+        case "update-user-note":
+            guard arguments.count >= 3 else {
+                throw HelperError.invalidArguments("update-user-note에는 항목 ID와 메모가 필요합니다.")
+            }
+            guard let reminder = store.calendarItem(withIdentifier: arguments[1]) as? EKReminder else {
+                throw HelperError.reminderNotFound
+            }
+            reminder.notes = replacingUserNote(in: reminder.notes ?? "", with: arguments[2])
+            try store.save(reminder, commit: true)
+            return ["ok": true]
+
         case "append-link":
             guard arguments.count >= 4 else {
                 throw HelperError.invalidArguments("append-link에는 항목 ID, 이름, URL이 필요합니다.")
@@ -171,6 +197,27 @@ struct WatchpupRemindersHelper {
     private static func dateString(_ date: Date?) -> Any {
         guard let date else { return NSNull() }
         return ISO8601DateFormatter().string(from: date)
+    }
+
+    private static func replacingUserNote(in notes: String, with content: String) -> String {
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let expression = try? NSRegularExpression(pattern: #"<note>\s*([\s\S]*?)\s*</note>"#, options: [.caseInsensitive])
+        let range = NSRange(trimmedNotes.startIndex..<trimmedNotes.endIndex, in: trimmedNotes)
+        let match = expression?.firstMatch(in: trimmedNotes, range: range)
+        let block = "<note>\n\(trimmedContent)\n</note>"
+
+        if let match, let blockRange = Range(match.range, in: trimmedNotes) {
+            let replacement = trimmedContent.isEmpty ? "" : block
+            return normalizedBlankLines(trimmedNotes.replacingCharacters(in: blockRange, with: replacement))
+        }
+        guard !trimmedContent.isEmpty else { return trimmedNotes }
+        return trimmedNotes.isEmpty ? block : "\(trimmedNotes)\n\n\(block)"
+    }
+
+    private static func normalizedBlankLines(_ text: String) -> String {
+        text.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func writeJSON(_ value: Any) throws {

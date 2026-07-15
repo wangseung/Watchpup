@@ -125,6 +125,14 @@ async function main(): Promise<void> {
     const id = await reminders.create(list.id, args.title, args.notes)
     return { id }
   })
+  ipcMain.handle(CMD.workReminderTitleUpdate, async (_e, args: { reminderId: string; title: string }) => {
+    await reminders.updateTitle(args.reminderId, args.title)
+    return { ok: true }
+  })
+  ipcMain.handle(CMD.workReminderNoteUpdate, async (_e, args: { reminderId: string; note: string }) => {
+    await reminders.updateUserNote(args.reminderId, args.note)
+    return { ok: true }
+  })
   ipcMain.handle(CMD.workReminderComplete, async (_e, args: { reminderId: string; completed: boolean }) => {
     await reminders.setCompleted(args.reminderId, args.completed)
     return { ok: true }
@@ -135,6 +143,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(CMD.workLinkStatus, (_e, url: string) => workStatus.status(url))
   ipcMain.handle(CMD.workLinkAction, (_e, args: { url: string; actionId: string }) => workStatus.runAction(args.url, args.actionId))
+  ipcMain.handle(CMD.workRemindersOpen, () => shell.openPath('/System/Applications/Reminders.app'))
   ipcMain.handle('pet.images.get', () => petImagesFromDir(configStore.get().petImageDir))
   ipcMain.handle('pet.codex.get', () => resolveCodexPet(configStore.get().petCodexDir))
 

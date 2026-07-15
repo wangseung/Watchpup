@@ -1,7 +1,8 @@
 import { copyToClipboard } from './richtext.js'
+import { buildWorkPrompt, sortWorkItems, userNoteContent } from './work-support.js'
 
 const KIND_LABEL = { jira: 'Jira', github: 'GitHub', slack: 'Slack', notion: 'Notion', figma: 'Figma', web: 'Web' }
-const state = { items: [], selectedId: '', query: '', kind: '', includeCompleted: false, loading: false }
+const state = { items: [], selectedId: '', query: '', kind: '', includeCompleted: false, loading: false, sort: 'dueDateThenTitle', manualOrder: [] }
 
 const listSelect = document.getElementById('work-list-select')
 const listEl = document.getElementById('work-list')
@@ -30,12 +31,22 @@ function formatDue(value) {
 
 function filteredItems() {
   const query = state.query.trim().toLowerCase()
-  return state.items.filter((item) => {
+  const filtered = state.items.filter((item) => {
     if (state.kind && !item.links?.some((link) => link.kind === state.kind)) return false
     if (!query) return true
     return [item.title, item.notes, ...(item.links || []).flatMap((link) => [link.title, link.url])]
       .filter(Boolean).join(' ').toLowerCase().includes(query)
   })
+  return sortWorkItems(filtered, state.sort, state.manualOrder)
+}
+
+function orderedOpenItems() {
+  return sortWorkItems(state.items.filter((item) => !item.completed), state.sort, state.manualOrder)
+}
+
+function issueNumber(item) {
+  const index = orderedOpenItems().findIndex((candidate) => candidate.id === item.id)
+  return index < 0 ? null : index + 1
 }
 
 function renderList() {
@@ -60,6 +71,8 @@ function renderList() {
     card.append(top)
 
     const meta = el('div', 'work-card-meta')
+    const number = issueNumber(item)
+    if (number) meta.append(el('span', 'work-issue', `#${number}`))
     for (const kind of [...new Set((item.links || []).map((link) => link.kind))].slice(0, 4)) {
       meta.append(el('span', `work-kind kind-${kind}`, KIND_LABEL[kind] || 'Web'))
     }
@@ -155,7 +168,10 @@ function renderDetail() {
   const titleWrap = el('div', 'work-detail-title-wrap')
   const kicker = el('div', 'work-detail-kicker', `${item.account} / ${item.listName}`)
   const title = el('h1', '', item.title || '제목 없음')
-  titleWrap.append(kicker, title)
+  const editTitle = el('button', 'work-title-edit', '✎')
+  editTitle.type = 'button'; editTitle.title = '제목 편집'; editTitle.setAttribute('aria-label', '제목 편집')
+  editTitle.addEventListener('click', () => renderTitleEditor(titleWrap, item))
+  titleWrap.append(kicker, title, editTitle)
   const complete = el('button', item.completed ? 'work-complete done' : 'work-complete', item.completed ? '✓ 완료' : '완료로 표시')
   complete.type = 'button'
   complete.addEventListener('click', async () => {
@@ -173,8 +189,15 @@ function renderDetail() {
 
   const body = el('div', 'work-detail-body')
   const notesSection = el('section', 'work-section')
-  notesSection.append(el('h2', '', '메모'))
-  notesSection.append(el('div', `work-notes${item.notes ? '' : ' empty-note'}`, item.notes || '메모가 없습니다.'))
+  const noteHead = el('div', 'work-note-actions')
+  noteHead.append(el('h2', '', '메모'))
+  const editNote = el('button', '', '편집')
+  editNote.type = 'button'
+  noteHead.append(editNote)
+  const note = userNoteContent(item.notes)
+  const noteBody = el('div', `work-notes${note ? '' : ' empty-note'}`, note || '메모가 없습니다.')
+  editNote.addEventListener('click', () => renderNoteEditor(notesSection, item, note))
+  notesSection.append(noteHead, noteBody)
   body.append(notesSection)
 
   const linksSection = el('section', 'work-section')
@@ -213,7 +236,75 @@ function renderDetail() {
   })
   linksSection.append(form)
   body.append(linksSection)
+
+  const codexSection = el('section', 'work-section')
+  const codexHead = el('div', 'work-codex-head')
+  codexHead.append(el('h2', '', 'Codex'))
+  const copyPrompt = el('button', '', '프롬프트 복사')
+  copyPrompt.type = 'button'
+  copyPrompt.addEventListener('click', async () => {
+    await copyToClipboard(buildWorkPrompt({
+      item,
+      issueNumber: issueNumber(item),
+      listTitle: `${item.account} / ${item.listName}`,
+    }))
+    copyPrompt.textContent = '복사됨'
+    setTimeout(() => { copyPrompt.textContent = '프롬프트 복사' }, 1200)
+  })
+  codexHead.append(copyPrompt)
+  const identifiers = el('div', 'work-identifiers')
+  const number = issueNumber(item)
+  if (number) identifiers.append(el('span', 'work-identifier-label', 'Work issue'), el('span', 'work-identifier-value', `#${number}`))
+  identifiers.append(el('span', 'work-identifier-label', 'Reminder ID'), el('span', 'work-identifier-value', item.id))
+  codexSection.append(codexHead, identifiers)
+  body.append(codexSection)
   detailEl.append(body)
+}
+
+function renderTitleEditor(host, item) {
+  const form = el('form', 'work-title-form')
+  const input = el('input')
+  input.value = item.title || ''; input.required = true
+  const save = el('button', 'primary', '저장'); save.type = 'submit'
+  const cancel = el('button', '', '취소'); cancel.type = 'button'
+  form.append(input, save, cancel)
+  host.replaceChildren(el('div', 'work-detail-kicker', `${item.account} / ${item.listName}`), form)
+  input.focus(); input.select()
+  cancel.addEventListener('click', renderDetail)
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault(); save.disabled = true
+    try {
+      await window.watchpup.workReminderTitleUpdate(item.id, input.value)
+      await refreshWorkView({ preserveSelection: true })
+    } catch (error) {
+      hintEl.textContent = error?.message || '제목을 변경하지 못했습니다.'
+      save.disabled = false
+    }
+  })
+}
+
+function renderNoteEditor(section, item, note) {
+  const editor = el('form', 'work-note-editor')
+  const textarea = el('textarea'); textarea.value = note
+  const actions = el('div', 'work-note-actions')
+  actions.append(el('span', 'hint', '<note> 블록으로 저장되어 링크는 유지됩니다.'))
+  const buttons = el('div')
+  const cancel = el('button', '', '취소'); cancel.type = 'button'
+  const save = el('button', 'primary', '저장'); save.type = 'submit'
+  buttons.append(cancel, save); actions.append(buttons); editor.append(textarea, actions)
+  section.replaceChildren(el('h2', '', '메모'), editor)
+  textarea.focus()
+  cancel.addEventListener('click', renderDetail)
+  editor.addEventListener('submit', async (event) => {
+    event.preventDefault(); save.disabled = true
+    try {
+      await window.watchpup.workReminderNoteUpdate(item.id, textarea.value)
+      await refreshWorkView({ preserveSelection: true })
+    } catch (error) {
+      hintEl.textContent = error?.message || '메모를 변경하지 못했습니다.'
+      save.disabled = false
+    }
+  })
 }
 
 function selectItem(id) {
@@ -250,6 +341,14 @@ export async function refreshWorkView(options = {}) {
 export async function initWorkView() {
   if (!listSelect) return
   try {
+    const config = await window.watchpup.settingsGet()
+    state.sort = config.reminderTaskSortOrder || 'dueDateThenTitle'
+    state.manualOrder = config.reminderTaskManualOrder || []
+    state.includeCompleted = config.showCompletedReminders === true
+    const sortSelect = document.getElementById('work-sort')
+    if (sortSelect) sortSelect.value = state.sort
+    const completedCheckbox = document.getElementById('work-show-completed')
+    if (completedCheckbox) completedCheckbox.checked = state.includeCompleted
     const result = await window.watchpup.workLists()
     listSelect.replaceChildren()
     const placeholder = el('option', '', '미리 알림 목록 선택')
@@ -312,6 +411,7 @@ createForm?.addEventListener('submit', async (event) => {
   }
 })
 document.getElementById('work-refresh')?.addEventListener('click', () => refreshWorkView({ preserveSelection: true }))
+document.getElementById('work-open-reminders')?.addEventListener('click', () => window.watchpup.workRemindersOpen())
 document.getElementById('work-search')?.addEventListener('input', (event) => {
   state.query = event.target.value
   renderList()
@@ -320,7 +420,20 @@ document.getElementById('work-kind-filter')?.addEventListener('change', (event) 
   state.kind = event.target.value
   renderList()
 })
+document.getElementById('work-sort')?.addEventListener('change', async (event) => {
+  state.sort = event.target.value
+  renderList(); renderDetail()
+  await window.watchpup.settingsSet({ reminderTaskSortOrder: state.sort })
+})
 document.getElementById('work-show-completed')?.addEventListener('change', async (event) => {
   state.includeCompleted = event.target.checked
+  await window.watchpup.settingsSet({ showCompletedReminders: state.includeCompleted })
   await refreshWorkView({ preserveSelection: true })
 })
+
+setInterval(() => {
+  const view = document.getElementById('work-view')
+  if (view?.classList.contains('active') && listSelect?.value && !state.loading) {
+    void refreshWorkView({ preserveSelection: true })
+  }
+}, 10_000)

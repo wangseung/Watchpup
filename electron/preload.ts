@@ -20,12 +20,17 @@ contextBridge.exposeInMainWorld('watchpup', {
   workListSelect: (listId: string) => ipcRenderer.invoke(CMD.workListSelect, listId),
   workReminderCreate: (listId: string, title: string, notes = '') =>
     ipcRenderer.invoke(CMD.workReminderCreate, { listId, title, notes }),
+  workReminderTitleUpdate: (reminderId: string, title: string) =>
+    ipcRenderer.invoke(CMD.workReminderTitleUpdate, { reminderId, title }),
+  workReminderNoteUpdate: (reminderId: string, note: string) =>
+    ipcRenderer.invoke(CMD.workReminderNoteUpdate, { reminderId, note }),
   workReminderComplete: (reminderId: string, completed: boolean) =>
     ipcRenderer.invoke(CMD.workReminderComplete, { reminderId, completed }),
   workReminderLinkAdd: (reminderId: string, link: { kind: string; title: string; url: string }) =>
     ipcRenderer.invoke(CMD.workReminderLinkAdd, { reminderId, ...link }),
   workLinkStatus: (url: string) => ipcRenderer.invoke(CMD.workLinkStatus, url),
   workLinkAction: (url: string, actionId: string) => ipcRenderer.invoke(CMD.workLinkAction, { url, actionId }),
+  workRemindersOpen: () => ipcRenderer.invoke(CMD.workRemindersOpen),
   mentionGet: (id: string) => ipcRenderer.invoke(CMD.mentionGet, id),
   mentionRead: (id: string) => ipcRenderer.invoke(CMD.mentionRead, id),
   threadImport: (permalink: string) => ipcRenderer.invoke(CMD.threadImport, permalink),

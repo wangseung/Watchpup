@@ -21,10 +21,13 @@ export const CMD = {
   workItems: 'work.items',
   workListSelect: 'work.list.select',
   workReminderCreate: 'work.reminder.create',
+  workReminderTitleUpdate: 'work.reminder.title.update',
+  workReminderNoteUpdate: 'work.reminder.note.update',
   workReminderComplete: 'work.reminder.complete',
   workReminderLinkAdd: 'work.reminder.link.add',
   workLinkStatus: 'work.link.status',
   workLinkAction: 'work.link.action',
+  workRemindersOpen: 'work.reminders.open',
 } as const
 
 export const EVT = {
@@ -110,6 +113,9 @@ export interface SettingsPatch {
     folder?: string
   }
   model?: string
+  reminderTaskSortOrder?: 'manual' | 'dueDateThenTitle' | 'createdNewest' | 'updatedNewest' | 'titleAscending'
+  reminderTaskManualOrder?: string[]
+  showCompletedReminders?: boolean
 }
 
 /** 저장할 토큰(빈 문자열/undefined는 무시 = 기존 유지). 값은 Keychain에만 저장. */

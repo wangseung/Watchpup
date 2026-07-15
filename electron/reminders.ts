@@ -7,7 +7,7 @@ import type { ReminderListRef, WorkItem } from '../src/core/work/types.js'
 
 const execFileAsync = promisify(execFile)
 
-export type ReminderCommand = 'lists' | 'tasks' | 'create' | 'set-completed' | 'append-link'
+export type ReminderCommand = 'lists' | 'tasks' | 'create' | 'update-title' | 'update-user-note' | 'set-completed' | 'append-link'
 export type ReminderCommandRunner = (command: ReminderCommand, args: string[]) => Promise<string>
 
 function resolveHelperPath(): string {
@@ -89,6 +89,16 @@ export class ReminderGateway {
     const id = typeof result.id === 'string' ? result.id : ''
     if (!id) throw new Error('생성된 Reminder ID를 확인하지 못했습니다.')
     return id
+  }
+
+  async updateTitle(reminderId: string, title: string): Promise<void> {
+    const safeTitle = title.trim()
+    if (!safeTitle) throw new Error('작업 제목을 입력해주세요.')
+    await this.runCommand('update-title', [reminderId, safeTitle])
+  }
+
+  async updateUserNote(reminderId: string, note: string): Promise<void> {
+    await this.runCommand('update-user-note', [reminderId, note.trim()])
   }
 
   async appendLink(reminderId: string, title: string, url: string): Promise<void> {

@@ -83,4 +83,18 @@ describe('StateStore', () => {
     restored.clearNaggingSlackNews()
     expect(new StateStore(path).naggingSlackNews(now)).toEqual([])
   })
+  it('persists the latest 100 nagging log entries in newest-first order', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'watchpup-st-')), 'state.json')
+    const s = new StateStore(path)
+    for (let i = 0; i < 105; i++) {
+      s.appendNaggingLog({ at: i, kind: 'work', text: `잔소리 ${i}`, context: `work-${i}` })
+    }
+
+    const restored = new StateStore(path)
+    expect(restored.naggingLog()).toHaveLength(100)
+    expect(restored.naggingLog()[0]?.text).toBe('잔소리 104')
+    expect(restored.naggingLog().at(-1)?.text).toBe('잔소리 5')
+    restored.clearNaggingLog()
+    expect(new StateStore(path).naggingLog()).toEqual([])
+  })
 })

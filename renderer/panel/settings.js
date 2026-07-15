@@ -110,6 +110,7 @@ function showSset(key) {
   settingsViewEl.classList.toggle('flow-active', isFlow)
   settingsFormEl.style.display = isFlow ? 'none' : ''
   playbooksPanelEl.style.display = isFlow ? '' : 'none'
+  if (key === 'nagging') void renderNaggingLog()
 }
 
 document.querySelectorAll('.sset-tab').forEach((tab) => {
@@ -143,6 +144,62 @@ const slackNewsKeywordsInput = settingsForm.elements['slackNewsKeywords']
 const naggingCard = document.querySelector('.nagging-card')
 const naggingHint = document.getElementById('nagging-hint')
 const naggingCalendarSettings = document.getElementById('nagging-calendar-settings')
+const naggingLogList = document.getElementById('nagging-log-list')
+const naggingLogCount = document.getElementById('nagging-log-count')
+const naggingLogRefresh = document.getElementById('nagging-log-refresh')
+const naggingLogClear = document.getElementById('nagging-log-clear')
+
+const NAGGING_KIND_LABELS = {
+  calendar: '캘린더',
+  agent: 'Agent',
+  slack: 'Slack',
+  work: 'Work',
+  general: '일반',
+}
+
+function naggingLogRow(entry) {
+  const row = document.createElement('li')
+  const meta = document.createElement('div')
+  meta.className = 'nagging-log-meta'
+  const kind = document.createElement('span')
+  kind.className = `nagging-log-kind kind-${entry.kind || 'general'}`
+  kind.textContent = NAGGING_KIND_LABELS[entry.kind] || entry.kind || '일반'
+  const time = document.createElement('time')
+  time.dateTime = new Date(entry.at).toISOString()
+  time.textContent = new Date(entry.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  meta.append(kind, time)
+  if (entry.context) {
+    const context = document.createElement('span')
+    context.className = 'nagging-log-context'
+    context.textContent = entry.context
+    meta.append(context)
+  }
+  const text = document.createElement('p')
+  text.textContent = entry.text || '(빈 문구)'
+  row.append(meta, text)
+  return row
+}
+
+async function renderNaggingLog() {
+  if (!naggingLogList) return
+  try {
+    const entries = await window.watchpup.naggingLogList()
+    naggingLogCount.textContent = `최근 잔소리 ${entries.length}개`
+    naggingLogList.replaceChildren(...entries.map(naggingLogRow))
+    if (!entries.length) {
+      const empty = document.createElement('li')
+      empty.className = 'nagging-log-empty'
+      empty.textContent = '아직 표시된 잔소리가 없어요.'
+      naggingLogList.append(empty)
+    }
+  } catch (error) {
+    naggingLogList.replaceChildren()
+    const failed = document.createElement('li')
+    failed.className = 'nagging-log-empty'
+    failed.textContent = `로그를 불러오지 못했습니다: ${error?.message || error}`
+    naggingLogList.append(failed)
+  }
+}
 
 function renderModelOptions(current, available) {
   const modelState = modelOptionsWithCurrent(current, available)
@@ -236,6 +293,13 @@ if (naggingMinInput) naggingMinInput.addEventListener('input', updateNaggingCont
 if (naggingMaxInput) naggingMaxInput.addEventListener('input', updateNaggingControls)
 if (slackNewsEnabledInput) slackNewsEnabledInput.addEventListener('change', updateNaggingControls)
 if (naggingCalendarSettings) naggingCalendarSettings.addEventListener('click', () => window.watchpup.openCalendarPrivacy())
+if (naggingLogRefresh) naggingLogRefresh.addEventListener('click', () => renderNaggingLog())
+if (naggingLogClear) naggingLogClear.addEventListener('click', async () => {
+  if (!confirm('잔소리 디버그 로그를 모두 비울까요?')) return
+  await window.watchpup.naggingLogClear()
+  await renderNaggingLog()
+})
+window.watchpup.onNaggingLogChanged?.(() => renderNaggingLog())
 
 async function loadSettings() {
   const cfg = await window.watchpup.settingsGet()
@@ -259,6 +323,7 @@ async function loadSettings() {
   updateHudSizeLabel()
   updateHudControls()
   updateNaggingControls()
+  await renderNaggingLog()
   if (settingsForm.elements['persona']) settingsForm.elements['persona'].value = cfg.persona || ''
   if (settingsForm.elements['bubbleStyle']) settingsForm.elements['bubbleStyle'].value = cfg.bubbleStyle || 'status'
   const petimgPathEl = document.getElementById('petimg-path')

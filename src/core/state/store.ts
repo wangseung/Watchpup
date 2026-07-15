@@ -13,6 +13,15 @@ export interface WindowBounds {
   height: number
 }
 
+export type NaggingLogKind = 'calendar' | 'agent' | 'slack' | 'work' | 'general'
+
+export interface NaggingLogEntry {
+  at: number
+  kind: NaggingLogKind
+  text: string
+  context?: string
+}
+
 export interface WatchpupState {
   dedup: Record<string, number>
   badge: number
@@ -32,6 +41,7 @@ export interface WatchpupState {
     calendarNotified?: Record<string, number>
     slackNewsCursor?: Record<string, string>
     slackNewsQueue?: SlackNewsNaggingItem[]
+    log?: NaggingLogEntry[]
   }
 }
 
@@ -153,6 +163,22 @@ export class StateStore {
     const nagging = this.state.nagging
     if (!nagging?.slackNewsQueue?.length) return
     nagging.slackNewsQueue = []
+    this.persist()
+  }
+
+  appendNaggingLog(entry: NaggingLogEntry): void {
+    const log = ((this.state.nagging ??= {}).log ??= [])
+    log.push(structuredClone(entry))
+    this.state.nagging!.log = log.slice(-100)
+    this.persist()
+  }
+  naggingLog(): NaggingLogEntry[] {
+    return structuredClone(this.state.nagging?.log ?? []).reverse()
+  }
+  clearNaggingLog(): void {
+    const nagging = this.state.nagging
+    if (!nagging?.log?.length) return
+    nagging.log = []
     this.persist()
   }
 

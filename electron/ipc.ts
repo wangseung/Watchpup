@@ -12,6 +12,8 @@ export const CMD = {
   settingsSet: 'settings.set',
   modelCatalogGet: 'model.catalog.get',
   modelCatalogRefresh: 'model.catalog.refresh',
+  naggingLogList: 'nagging.log.list',
+  naggingLogClear: 'nagging.log.clear',
   tokensGet: 'tokens.get',
   tokensSet: 'tokens.set',
   playbooksList: 'playbooks.list',
@@ -53,6 +55,7 @@ export const EVT = {
   hudVisibility: 'hud.visibility',
   actionStream: 'action.stream',
   actionDone: 'action.done',
+  naggingLogChanged: 'nagging.log.changed',
 } as const
 
 export interface ChatSendArgs {

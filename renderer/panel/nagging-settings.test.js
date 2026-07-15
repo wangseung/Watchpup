@@ -43,4 +43,10 @@ describe('잔소리 베타 설정', () => {
     expect(channels?.value).toContain('all_random')
     expect(keywords).not.toBeNull()
   })
+
+  it('실제로 표시된 잔소리를 확인하는 디버그 로그 영역을 제공한다', () => {
+    expect(document.getElementById('nagging-log-list')).not.toBeNull()
+    expect(document.getElementById('nagging-log-refresh')?.textContent).toContain('새로고침')
+    expect(document.getElementById('nagging-log-clear')?.textContent).toContain('비우기')
+  })
 })

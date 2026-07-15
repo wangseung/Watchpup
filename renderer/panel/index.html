@@ -416,6 +416,17 @@
               </div>
               <p id="nagging-hint" class="hint">활성화하면 캘린더 접근 권한을 요청하고, 5~12분 사이의 랜덤한 시점에 Work나 Slack 소식 말풍선이 나타납니다.</p>
             </fieldset>
+            <fieldset class="nagging-debug-card">
+              <legend>디버그 로그</legend>
+              <div class="nagging-log-header">
+                <p><strong id="nagging-log-count">최근 잔소리 0개</strong><span>실제로 말풍선에 표시된 내역을 최신순으로 보관합니다.</span></p>
+                <div>
+                  <button type="button" id="nagging-log-refresh">새로고침</button>
+                  <button type="button" id="nagging-log-clear">비우기</button>
+                </div>
+              </div>
+              <ol id="nagging-log-list" class="nagging-log-list" aria-live="polite"></ol>
+            </fieldset>
           </div>
 
           <div class="sset" data-sset="store">

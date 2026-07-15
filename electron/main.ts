@@ -7,7 +7,7 @@ import { ConfigStore } from '../src/core/config/store.js'
 import { SessionStore } from '../src/core/session/store.js'
 import { KeyedMutex } from '../src/core/session/locks.js'
 import { Semaphore } from '../src/core/session/semaphore.js'
-import { StateStore } from '../src/core/state/store.js'
+import { StateStore, type NaggingLogEntry, type NaggingLogKind } from '../src/core/state/store.js'
 import { AuditStore } from '../src/core/observability/audit.js'
 import { MentionStore } from '../src/core/state/mentions.js'
 import { LessonStore } from '../src/core/state/lessons.js'
@@ -113,6 +113,12 @@ async function main(): Promise<void> {
   ipcMain.handle(CMD.settingsGet, () => configStore.get())
   ipcMain.handle(CMD.modelCatalogGet, () => modelCatalog.get())
   ipcMain.handle(CMD.modelCatalogRefresh, () => modelCatalog.refresh())
+  ipcMain.handle(CMD.naggingLogList, () => state.naggingLog())
+  ipcMain.handle(CMD.naggingLogClear, () => {
+    state.clearNaggingLog()
+    broadcast(EVT.naggingLogChanged, null)
+    return { ok: true }
+  })
   ipcMain.handle(CMD.workLists, async () => {
     const lists = await reminders.lists()
     const current = configStore.get()
@@ -643,6 +649,13 @@ async function main(): Promise<void> {
   let calendarRetryAt = 0
   let calendarPermissionNagged = false
 
+  function showNagging(kind: NaggingLogKind, text: string, payload: Record<string, unknown>, context?: string): void {
+    const entry: NaggingLogEntry = { at: Date.now(), kind, text, ...(context ? { context } : {}) }
+    state.appendNaggingLog(entry)
+    send(pet, EVT.bubble, { text, ...payload })
+    broadcast(EVT.naggingLogChanged, entry)
+  }
+
   function acknowledgeAgentNagging(): void {
     if (state.get().nagging?.agent) state.setNaggingAgent(undefined)
   }
@@ -676,7 +689,7 @@ async function main(): Promise<void> {
           const event = pickCalendarNaggingEvent(events, state.naggingCalendarNotified(), now)
           if (event) {
             state.markNaggingCalendar(calendarEventKey(event), now)
-            send(pet, EVT.bubble, { text: calendarNaggingLine(event, now), calendarEvent: true })
+            showNagging('calendar', calendarNaggingLine(event, now), { calendarEvent: true }, event.title)
             lastActivity = now
             return true
           }
@@ -685,7 +698,7 @@ async function main(): Promise<void> {
           console.warn('잔소리 캘린더 조회 실패', error)
           if (!calendarPermissionNagged && String((error as Error)?.message || error).includes('캘린더 전체 접근 권한')) {
             calendarPermissionNagged = true
-            send(pet, EVT.bubble, { text: '캘린더 일정도 알려주려면 권한이 필요해요. 눌러서 허용해줘!', calendarPrivacy: true })
+            showNagging('calendar', '캘린더 일정도 알려주려면 권한이 필요해요. 눌러서 허용해줘!', { calendarPrivacy: true }, '캘린더 권한')
             return true
           }
         }
@@ -693,7 +706,7 @@ async function main(): Promise<void> {
 
       const pending = state.get().nagging?.agent
       if (pending && pending.dueAt <= now) {
-        send(pet, EVT.bubble, { text: agentNaggingLine(pending), activityId: pending.activityId })
+        showNagging('agent', agentNaggingLine(pending), { activityId: pending.activityId }, pending.title)
         state.setNaggingAgent({
           ...pending,
           dueAt: now + nextNaggingDelayMs(configStore.get().naggingMinMinutes, configStore.get().naggingMaxMinutes),
@@ -723,12 +736,12 @@ async function main(): Promise<void> {
       const showNews = !!news && (!item || Math.random() < 0.45)
       if (showNews && news) {
         state.dismissNaggingSlackNews(news.id)
-        send(pet, EVT.bubble, { text: slackNewsNaggingLine(news), slackNewsUrl: news.permalink })
+        showNagging('slack', slackNewsNaggingLine(news), { slackNewsUrl: news.permalink }, `#${news.channelName}`)
         lastActivity = Date.now()
         return
       }
       if (item) state.setNagging({ lastTaskId: item.id })
-      send(pet, EVT.bubble, { text: naggingLine(item), workItemId: item?.id })
+      showNagging(item ? 'work' : 'general', naggingLine(item), { workItemId: item?.id }, item?.title)
       lastActivity = Date.now()
     } catch (error) {
       console.warn('잔소리 작업 조회 실패', error)

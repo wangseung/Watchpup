@@ -1419,8 +1419,27 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); 
 .nagging-card.is-disabled .nagging-priorities,
 .nagging-card.is-disabled .nagging-calendar-access { opacity: 0.45; }
 .nagging-card.is-disabled .nagging-slack-news { opacity: 0.45; }
+.nagging-log-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nagging-log-header p { display: grid; gap: 3px; margin: 0; color: var(--fg-faint); font-size: 10.5px; }
+.nagging-log-header strong { color: var(--fg); font-size: 12px; }
+.nagging-log-header > div { display: flex; gap: 6px; }
+.nagging-log-header button { padding: 6px 9px; font-size: 10px; }
+.nagging-log-list { display: grid; gap: 7px; max-height: 320px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.nagging-log-list > li {
+  display: grid; gap: 6px; padding: 9px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-sunken);
+}
+.nagging-log-list > li > p { margin: 0; color: var(--fg-muted); font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.nagging-log-meta { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--fg-faint); font: 500 9.5px var(--font-mono); }
+.nagging-log-kind { padding: 3px 6px; border-radius: 999px; color: var(--accent-strong); background: var(--accent-soft); font-weight: 700; }
+.nagging-log-kind.kind-agent { color: #8eeab7; background: rgba(80, 216, 144, 0.1); }
+.nagging-log-kind.kind-slack { color: #d6a8ef; background: rgba(173, 93, 202, 0.12); }
+.nagging-log-kind.kind-calendar { color: #ffb09d; background: rgba(255, 107, 107, 0.11); }
+.nagging-log-context { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.nagging-log-empty { color: var(--fg-faint); font-size: 11px; text-align: center; }
 @media (max-width: 760px) {
   .nagging-slack-subscriptions { grid-template-columns: 1fr; }
+  .nagging-log-header { align-items: flex-start; flex-direction: column; }
 }
 
 /* 저장 바 (sticky) */

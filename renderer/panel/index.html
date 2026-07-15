@@ -318,6 +318,17 @@
                 <span>크게</span>
               </span>
             </label>
+            <div class="bubble-behavior-row">
+              <label>
+                최대 말풍선
+                <span class="bubble-number"><input type="number" name="bubbleStackCount" min="1" max="5" step="1" value="3" /><span>개</span></span>
+              </label>
+              <label>
+                노출 시간
+                <span class="bubble-number"><input type="number" name="bubbleDurationSeconds" min="3" max="60" step="1" value="10" /><span>초</span></span>
+              </label>
+            </div>
+            <span class="field-hint">새 말풍선은 펫 가까이에 쌓이고, 오래된 항목부터 사라집니다.</span>
             <label class="checkbox">
               <input type="checkbox" name="showActivityHud" />
               세션 HUD 표시

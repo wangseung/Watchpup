@@ -126,6 +126,8 @@ const petSizeInput = settingsForm.elements['petSizePercent']
 const petSizeValue = document.getElementById('pet-size-value')
 const bubbleSizeInput = settingsForm.elements['bubbleSizePercent']
 const bubbleSizeValue = document.getElementById('bubble-size-value')
+const bubbleStackCountInput = settingsForm.elements['bubbleStackCount']
+const bubbleDurationInput = settingsForm.elements['bubbleDurationSeconds']
 const hudSizeInput = settingsForm.elements['hudSizePercent']
 const hudSizeValue = document.getElementById('hud-size-value')
 const showActivityHudInput = settingsForm.elements['showActivityHud']
@@ -252,6 +254,11 @@ function updateBubbleSizeLabel() {
   if (bubbleSizeInput && bubbleSizeValue) bubbleSizeValue.textContent = `${bubbleSizeInput.value}%`
 }
 
+function boundedInteger(input, fallback, minimum, maximum) {
+  const value = parseInt(input?.value || '', 10)
+  return Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
+}
+
 function updateHudSizeLabel() {
   if (hudSizeInput && hudSizeValue) hudSizeValue.textContent = `${hudSizeInput.value}%`
 }
@@ -338,6 +345,8 @@ async function loadSettings() {
   if (settingsForm.elements['petAlwaysOnTop']) settingsForm.elements['petAlwaysOnTop'].checked = cfg.petAlwaysOnTop !== false
   if (petSizeInput) petSizeInput.value = String(cfg.petSizePercent ?? 100)
   if (bubbleSizeInput) bubbleSizeInput.value = String(cfg.bubbleSizePercent ?? 100)
+  if (bubbleStackCountInput) bubbleStackCountInput.value = String(cfg.bubbleStackCount ?? 3)
+  if (bubbleDurationInput) bubbleDurationInput.value = String(cfg.bubbleDurationSeconds ?? 10)
   if (hudSizeInput) hudSizeInput.value = String(cfg.hudSizePercent ?? 100)
   if (hudAlignmentInput) hudAlignmentInput.value = cfg.hudAlignment === 'left' ? 'left' : 'right'
   if (showActivityHudInput) showActivityHudInput.checked = cfg.showActivityHud !== false
@@ -738,6 +747,8 @@ settingsForm.addEventListener('submit', async (e) => {
     petAlwaysOnTop: settingsForm.elements['petAlwaysOnTop'] ? settingsForm.elements['petAlwaysOnTop'].checked : true,
     petSizePercent: petSizeInput ? parseInt(petSizeInput.value, 10) : 100,
     bubbleSizePercent: bubbleSizeInput ? parseInt(bubbleSizeInput.value, 10) : 100,
+    bubbleStackCount: boundedInteger(bubbleStackCountInput, 3, 1, 5),
+    bubbleDurationSeconds: boundedInteger(bubbleDurationInput, 10, 3, 60),
     hudSizePercent: hudSizeInput ? parseInt(hudSizeInput.value, 10) : 100,
     hudAlignment: hudAlignmentInput?.value === 'left' ? 'left' : 'right',
     showActivityHud: showActivityHudInput ? showActivityHudInput.checked : true,

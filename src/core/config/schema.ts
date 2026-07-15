@@ -77,6 +77,9 @@ export const watchpupConfigSchema = z.object({
   petSizePercent: z.number().int().min(50).max(200).default(100),
   // 펫 위에 잠깐 표시되는 상태/분석 말풍선 크기(%).
   bubbleSizePercent: z.number().int().min(60).max(140).default(100),
+  // 동시에 보이는 말풍선 최대 개수와 일반 말풍선 노출 시간.
+  bubbleStackCount: z.number().int().min(1).max(5).default(3),
+  bubbleDurationSeconds: z.number().int().min(3).max(60).default(10),
   // 펫 아래에 표시되는 Claude/Codex/Slack 세션 HUD 크기(%).
   hudSizePercent: z.number().int().min(60).max(140).default(100),
   // 펫·말풍선·HUD가 공유하는 가로 기준선. 화면 오른쪽 배치를 고려해 오른쪽이 기본.

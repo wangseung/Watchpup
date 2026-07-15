@@ -50,6 +50,8 @@ export const EVT = {
   petCodex: 'pet.codex',
   petSize: 'pet.size',
   bubbleSize: 'bubble.size',
+  bubbleStackCount: 'bubble.stackCount',
+  bubbleDuration: 'bubble.duration',
   hudSize: 'hud.size',
   hudAlignment: 'hud.alignment',
   hudVisibility: 'hud.visibility',
@@ -107,6 +109,8 @@ export interface SettingsPatch {
   petAlwaysOnTop?: boolean
   petSizePercent?: number
   bubbleSizePercent?: number
+  bubbleStackCount?: number
+  bubbleDurationSeconds?: number
   hudSizePercent?: number
   hudAlignment?: 'left' | 'right'
   showActivityHud?: boolean

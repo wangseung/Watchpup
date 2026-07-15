@@ -552,7 +552,7 @@ async function main(): Promise<void> {
     const requestedWidth = typeof value === 'number' ? b.width : value?.width
     if (typeof requestedHeight !== 'number' || typeof requestedWidth !== 'number') return
     const workArea = screen.getDisplayMatching(b).workArea
-    const h = Math.max(164, Math.min(800, Math.round(requestedHeight)))
+    const h = Math.max(164, Math.min(workArea.height, 1200, Math.round(requestedHeight)))
     const w = Math.max(340, Math.min(workArea.width, 860, Math.round(requestedWidth)))
     if (h === b.height && w === b.width) return
     const bottom = b.y + b.height
@@ -889,6 +889,8 @@ async function main(): Promise<void> {
     send(pet, EVT.petTheme, c.petTheme)
     send(pet, EVT.petSize, c.petSizePercent)
     send(pet, EVT.bubbleSize, c.bubbleSizePercent)
+    send(pet, EVT.bubbleStackCount, c.bubbleStackCount)
+    send(pet, EVT.bubbleDuration, c.bubbleDurationSeconds)
     send(pet, EVT.hudSize, c.hudSizePercent)
     send(pet, EVT.hudAlignment, c.hudAlignment)
     send(pet, EVT.hudVisibility, c.showActivityHud)

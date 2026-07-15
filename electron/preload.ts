@@ -77,6 +77,8 @@ contextBridge.exposeInMainWorld('watchpup', {
   onPetImages: (cb: (map: unknown) => void) => sub(EVT.petImages, cb),
   onPetSize: (cb: (value: unknown) => void) => sub(EVT.petSize, cb),
   onBubbleSize: (cb: (value: unknown) => void) => sub(EVT.bubbleSize, cb),
+  onBubbleStackCount: (cb: (value: unknown) => void) => sub(EVT.bubbleStackCount, cb),
+  onBubbleDuration: (cb: (value: unknown) => void) => sub(EVT.bubbleDuration, cb),
   onHudSize: (cb: (value: unknown) => void) => sub(EVT.hudSize, cb),
   onHudAlignment: (cb: (value: unknown) => void) => sub(EVT.hudAlignment, cb),
   onHudVisibility: (cb: (value: unknown) => void) => sub(EVT.hudVisibility, cb),

@@ -8,10 +8,6 @@ export function bubbleSurfaceState({ active, showActivityHud, activityCount }) {
   }
 }
 
-export function canIncomingBubbleReplaceStream(chatStreaming, chatBuffer) {
-  return !chatStreaming || !String(chatBuffer || '').trim()
-}
-
 export function hudFoldContent({ activityCount, folded }) {
   const count = Math.max(0, Number(activityCount) || 0)
   const accessibleLabel = `항목 ${count}개`

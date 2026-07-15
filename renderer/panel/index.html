@@ -45,7 +45,13 @@
               <button type="button" class="cat-chip" data-cat="schedule">일정·미팅</button>
               <button type="button" class="cat-chip" data-cat="chat">잡담</button>
             </div>
-            <button type="button" id="todo-only" class="todo-only-chip">☐ 할 일 남음만</button>
+            <div class="list-filter-row">
+              <button type="button" id="todo-only" class="todo-only-chip">☐ 할 일 남음만</button>
+              <select id="mention-sort" aria-label="멘션 정렬">
+                <option value="lastMessage">최근 메시지순</option>
+                <option value="fetched">가져온 순서</option>
+              </select>
+            </div>
           </div>
           <aside id="list" aria-label="멘션 목록"></aside>
         </div>

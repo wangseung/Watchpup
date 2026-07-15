@@ -3,6 +3,9 @@ export const CMD = {
   mentionsList: 'mentions.list',
   mentionGet: 'mention.get',
   mentionRead: 'mention.read',
+  mentionReminderLink: 'mention.reminder.link',
+  mentionToWork: 'mention.toWork',
+  mentionToWorkAI: 'mention.toWorkAI',
   threadImport: 'thread.import',
   todoToggle: 'todo.toggle',
   replyApprove: 'reply.approve',
@@ -68,6 +71,14 @@ export interface ThreadImportResult {
   existing: boolean
 }
 
+/** mention.toWork 결과. 목록 미선택 시 ok:false + reason:'no-list', 성공 시 생성된 Reminder id / updated:true면 기존 미리알림을 갱신한 것 */
+export interface MentionToWorkResult {
+  ok: boolean
+  id?: string
+  reason?: 'no-list'
+  updated?: boolean
+}
+
 export interface TodoToggleArgs {
   mentionId: string
   index: number
@@ -129,6 +140,7 @@ export interface SettingsPatch {
   reminderTaskSortOrder?: 'manual' | 'dueDateThenTitle' | 'createdNewest' | 'updatedNewest' | 'titleAscending'
   reminderTaskManualOrder?: string[]
   showCompletedReminders?: boolean
+  mentionSortOrder?: 'lastMessage' | 'fetched'
 }
 
 /** 저장할 토큰(빈 문자열/undefined는 무시 = 기존 유지). 값은 Keychain에만 저장. */

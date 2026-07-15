@@ -1722,6 +1722,24 @@ details.tools .section + .section { margin-top: var(--sp-4); }
   border-color: var(--accent);
 }
 
+.list-filter-row { display: flex; align-items: stretch; gap: var(--sp-2); margin-top: var(--sp-2); }
+.list-filter-row .todo-only-chip { flex: 1 1 auto; margin-top: 0; width: auto; }
+#mention-sort {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  font-family: var(--font-brand);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: color var(--t), border-color var(--t);
+}
+#mention-sort:hover { color: var(--fg); border-color: var(--border-strong); }
+#mention-sort:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
 /* ---------- 할 일 탭 ---------- */
 #todos-view { overflow-y: auto; flex-direction: column; }
 #todos-view.active { display: flex; }

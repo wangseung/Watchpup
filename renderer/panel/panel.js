@@ -187,6 +187,7 @@ async function refresh() {
 let listQuery = ''
 let listCat = '' // '' = 전체
 let todoOnly = false
+let mentionSortOrder = 'lastMessage' // 'lastMessage'(기본) | 'fetched'
 let pendingThreadImportId = null
 let importedThreadId = null
 function matchesCat(m) {
@@ -196,7 +197,7 @@ function matchesCat(m) {
 function renderList() {
   listEl.innerHTML = ''
   const q = listQuery.trim().toLowerCase()
-  const items = sortedMentions().filter((m) => matchesCat(m) && matchesQuery(m, q) && (!todoOnly || hasOpenTodos(m)))
+  const items = sortedMentions(mentionSortOrder).filter((m) => matchesCat(m) && matchesQuery(m, q) && (!todoOnly || hasOpenTodos(m)))
   if (!items.length) {
     const empty = document.createElement('p')
     empty.className = 'list-empty'
@@ -410,6 +411,21 @@ if (searchInput) {
   searchInput.addEventListener('input', () => {
     listQuery = searchInput.value
     renderList()
+  })
+}
+
+// 멘션 정렬(최근 메시지순 기본 / 가져온 순서) — 저장된 설정 복원 + 변경 시 저장
+const mentionSortSelect = document.getElementById('mention-sort')
+window.watchpup.settingsGet().then((config) => {
+  mentionSortOrder = config.mentionSortOrder === 'fetched' ? 'fetched' : 'lastMessage'
+  if (mentionSortSelect) mentionSortSelect.value = mentionSortOrder
+  renderList()
+}).catch(() => {})
+if (mentionSortSelect) {
+  mentionSortSelect.addEventListener('change', () => {
+    mentionSortOrder = mentionSortSelect.value
+    renderList()
+    window.watchpup.settingsSet({ mentionSortOrder }).catch((e) => console.error('settingsSet 실패', e))
   })
 }
 

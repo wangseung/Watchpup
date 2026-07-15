@@ -140,6 +140,7 @@ export interface SettingsPatch {
   reminderTaskSortOrder?: 'manual' | 'dueDateThenTitle' | 'createdNewest' | 'updatedNewest' | 'titleAscending'
   reminderTaskManualOrder?: string[]
   showCompletedReminders?: boolean
+  mentionSortOrder?: 'lastMessage' | 'fetched'
 }
 
 /** 저장할 토큰(빈 문자열/undefined는 무시 = 기존 유지). 값은 Keychain에만 저장. */

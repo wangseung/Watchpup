@@ -82,8 +82,10 @@ struct WatchpupRemindersHelper {
                     calendars: [calendar]
                 )
             let reminders = await fetchReminders(store, predicate: predicate)
+            let hierarchy = ReminderKitBridge().hierarchy(listIdentifier: calendar.calendarIdentifier)
             return reminders.map { reminder in
-                [
+                let entry = hierarchy[reminder.calendarItemIdentifier]
+                return [
                     "id": reminder.calendarItemIdentifier,
                     "name": reminder.title ?? "",
                     "body": reminder.notes ?? "",
@@ -94,6 +96,9 @@ struct WatchpupRemindersHelper {
                     "listId": calendar.calendarIdentifier,
                     "listName": calendar.title,
                     "account": calendar.source.title,
+                    "parentId": entry?.parentID as Any? ?? NSNull(),
+                    "childIds": entry?.childIDs ?? [],
+                    "depth": entry?.depth ?? 0,
                 ] as [String: Any]
             }
 
@@ -155,6 +160,17 @@ struct WatchpupRemindersHelper {
             reminder.notes = replacingUserNote(in: reminder.notes ?? "", with: arguments[2])
             try store.save(reminder, commit: true)
             return ["ok": true]
+
+        case "add-subtask":
+            guard arguments.count >= 3 else {
+                throw HelperError.invalidArguments("add-subtask에는 부모 항목 ID와 제목이 필요합니다.")
+            }
+            let title = arguments[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else {
+                throw HelperError.invalidArguments("서브태스크 제목을 입력해주세요.")
+            }
+            let id = try ReminderKitBridge().addSubtask(title: title, parentReminderID: arguments[1])
+            return ["ok": true, "id": id]
 
         case "append-link":
             guard arguments.count >= 4 else {

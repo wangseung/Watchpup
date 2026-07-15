@@ -21,6 +21,7 @@ export const CMD = {
   workItems: 'work.items',
   workListSelect: 'work.list.select',
   workReminderCreate: 'work.reminder.create',
+  workReminderSubtaskAdd: 'work.reminder.subtask.add',
   workReminderTitleUpdate: 'work.reminder.title.update',
   workReminderNoteUpdate: 'work.reminder.note.update',
   workReminderComplete: 'work.reminder.complete',

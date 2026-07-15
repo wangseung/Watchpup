@@ -17,6 +17,15 @@ describe('Work support', () => {
     expect(sortWorkItems(items, 'manual', ['B', 'A']).map((item) => item.id)).toEqual(['B', 'A'])
   })
 
+  it('서브태스크를 정렬된 부모 바로 아래에 배치한다', () => {
+    const rows = [
+      { id: 'C', title: 'Child', parentId: 'P' },
+      { id: 'Z', title: 'Zulu' },
+      { id: 'P', title: 'Parent' },
+    ]
+    expect(sortWorkItems(rows, 'titleAscending').map((item) => item.id)).toEqual(['P', 'C', 'Z'])
+  })
+
   it('Reminder 식별자와 링크가 포함된 Codex 프롬프트를 만든다', () => {
     const prompt = buildWorkPrompt({
       item: { id: 'R1', title: '작업', notes: '<note>확인</note>', links: [{ kind: 'jira', title: 'APP-1', url: 'https://x.atlassian.net/browse/APP-1' }] },

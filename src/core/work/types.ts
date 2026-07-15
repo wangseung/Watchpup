@@ -27,5 +27,8 @@ export interface WorkItem {
   dueAt?: number
   createdAt?: number
   updatedAt?: number
+  parentId?: string
+  childIds: string[]
+  depth: number
   links: WorkLink[]
 }

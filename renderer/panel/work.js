@@ -2,7 +2,7 @@ import { copyToClipboard } from './richtext.js'
 import { buildWorkPrompt, sortWorkItems, userNoteContent } from './work-support.js'
 
 const KIND_LABEL = { jira: 'Jira', github: 'GitHub', slack: 'Slack', notion: 'Notion', figma: 'Figma', web: 'Web' }
-const state = { items: [], selectedId: '', query: '', kind: '', includeCompleted: false, loading: false, sort: 'dueDateThenTitle', manualOrder: [] }
+const state = { items: [], selectedId: '', query: '', kind: '', includeCompleted: false, loading: false, sort: 'dueDateThenTitle', manualOrder: [], dragId: '' }
 
 const listSelect = document.getElementById('work-list-select')
 const listEl = document.getElementById('work-list')
@@ -63,9 +63,22 @@ function renderList() {
   for (const item of items) {
     const card = el('button', `work-card${item.id === state.selectedId ? ' selected' : ''}${item.completed ? ' completed' : ''}`)
     card.type = 'button'
+    card.style.paddingLeft = `${10 + Math.min(item.depth || 0, 8) * 18}px`
     card.addEventListener('click', () => selectItem(item.id))
+    if (state.sort === 'manual' && !item.completed) {
+      card.draggable = true
+      card.addEventListener('dragstart', () => { state.dragId = item.id })
+      card.addEventListener('dragover', (event) => event.preventDefault())
+      card.addEventListener('drop', async (event) => {
+        event.preventDefault()
+        if (state.dragId && state.dragId !== item.id) await moveManualItem(state.dragId, item.id)
+        state.dragId = ''
+      })
+    }
 
     const top = el('div', 'work-card-top')
+    if (state.sort === 'manual' && !item.completed) top.append(el('span', 'work-drag', '≡'))
+    else if (item.parentId) top.append(el('span', 'work-child-mark', '↳'))
     top.append(el('span', `work-check${item.completed ? ' done' : ''}`, item.completed ? '✓' : ''))
     top.append(el('span', 'work-card-title', item.title || '제목 없음'))
     card.append(top)
@@ -77,6 +90,7 @@ function renderList() {
       meta.append(el('span', `work-kind kind-${kind}`, KIND_LABEL[kind] || 'Web'))
     }
     if (item.dueAt) meta.append(el('span', `work-due${item.dueAt < Date.now() && !item.completed ? ' overdue' : ''}`, formatDue(item.dueAt)))
+    if (item.childIds?.length) meta.append(el('span', 'work-issue', `하위 ${item.childIds.length}`))
     card.append(meta)
     listEl.append(card)
   }
@@ -247,6 +261,8 @@ function renderDetail() {
       item,
       issueNumber: issueNumber(item),
       listTitle: `${item.account} / ${item.listName}`,
+      subtasks: subtasksOf(item),
+      parent: parentOf(item),
     }))
     copyPrompt.textContent = '복사됨'
     setTimeout(() => { copyPrompt.textContent = '프롬프트 복사' }, 1200)
@@ -258,7 +274,64 @@ function renderDetail() {
   identifiers.append(el('span', 'work-identifier-label', 'Reminder ID'), el('span', 'work-identifier-value', item.id))
   codexSection.append(codexHead, identifiers)
   body.append(codexSection)
+
+  const subtasksSection = el('section', 'work-section')
+  const subtasks = subtasksOf(item)
+  const subtaskHead = el('div', 'work-section-head')
+  subtaskHead.append(el('h2', '', '서브태스크'), el('span', 'work-link-count', `${subtasks.length}`))
+  const subtaskList = el('div', 'work-subtasks')
+  if (subtasks.length) {
+    for (const subtask of subtasks) {
+      const row = el('div', 'work-subtask-row')
+      const toggle = el('button', '', subtask.completed ? '✓' : '○'); toggle.type = 'button'
+      toggle.addEventListener('click', async (event) => {
+        event.stopPropagation()
+        await window.watchpup.workReminderComplete(subtask.id, !subtask.completed)
+        await refreshWorkView({ preserveSelection: true })
+      })
+      row.append(toggle, el('span', subtask.completed ? 'completed' : '', subtask.title))
+      row.addEventListener('click', () => selectItem(subtask.id))
+      subtaskList.append(row)
+    }
+  } else subtaskList.append(el('p', 'work-section-empty', '서브태스크가 없습니다.'))
+  const subtaskForm = el('form', 'work-subtask-form')
+  const subtaskTitle = el('input'); subtaskTitle.placeholder = '새 서브태스크'; subtaskTitle.required = true
+  const subtaskAdd = el('button', 'primary', '추가'); subtaskAdd.type = 'submit'
+  subtaskForm.append(subtaskTitle, subtaskAdd)
+  subtaskForm.addEventListener('submit', async (event) => {
+    event.preventDefault(); subtaskAdd.disabled = true
+    try {
+      const created = await window.watchpup.workReminderSubtaskAdd(item.id, subtaskTitle.value)
+      state.selectedId = created.id
+      await refreshWorkView({ preserveSelection: true })
+    } catch (error) {
+      hintEl.textContent = error?.message || '서브태스크를 추가하지 못했습니다.'
+      subtaskAdd.disabled = false
+    }
+  })
+  subtasksSection.append(subtaskHead, subtaskList, subtaskForm)
+  body.append(subtasksSection)
   detailEl.append(body)
+}
+
+function subtasksOf(item) {
+  return sortWorkItems(state.items.filter((candidate) => candidate.parentId === item.id), 'dueDateThenTitle')
+}
+
+function parentOf(item) {
+  return item.parentId ? state.items.find((candidate) => candidate.id === item.parentId) || null : null
+}
+
+async function moveManualItem(sourceId, targetId) {
+  const ids = orderedOpenItems().map((item) => item.id)
+  const sourceIndex = ids.indexOf(sourceId)
+  const targetIndex = ids.indexOf(targetId)
+  if (sourceIndex < 0 || targetIndex < 0) return
+  ids.splice(sourceIndex, 1)
+  ids.splice(targetIndex, 0, sourceId)
+  state.manualOrder = ids
+  renderList(); renderDetail()
+  await window.watchpup.settingsSet({ reminderTaskManualOrder: ids })
 }
 
 function renderTitleEditor(host, item) {
@@ -347,6 +420,7 @@ export async function initWorkView() {
     state.includeCompleted = config.showCompletedReminders === true
     const sortSelect = document.getElementById('work-sort')
     if (sortSelect) sortSelect.value = state.sort
+    document.getElementById('work-sort-reset')?.classList.toggle('hidden', state.sort !== 'manual')
     const completedCheckbox = document.getElementById('work-show-completed')
     if (completedCheckbox) completedCheckbox.checked = state.includeCompleted
     const result = await window.watchpup.workLists()
@@ -422,8 +496,14 @@ document.getElementById('work-kind-filter')?.addEventListener('change', (event) 
 })
 document.getElementById('work-sort')?.addEventListener('change', async (event) => {
   state.sort = event.target.value
+  document.getElementById('work-sort-reset')?.classList.toggle('hidden', state.sort !== 'manual')
   renderList(); renderDetail()
   await window.watchpup.settingsSet({ reminderTaskSortOrder: state.sort })
+})
+document.getElementById('work-sort-reset')?.addEventListener('click', async () => {
+  state.manualOrder = sortWorkItems(state.items.filter((item) => !item.completed), 'dueDateThenTitle').map((item) => item.id)
+  renderList(); renderDetail()
+  await window.watchpup.settingsSet({ reminderTaskManualOrder: state.manualOrder })
 })
 document.getElementById('work-show-completed')?.addEventListener('change', async (event) => {
   state.includeCompleted = event.target.checked

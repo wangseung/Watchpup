@@ -125,6 +125,10 @@ async function main(): Promise<void> {
     const id = await reminders.create(list.id, args.title, args.notes)
     return { id }
   })
+  ipcMain.handle(CMD.workReminderSubtaskAdd, async (_e, args: { parentReminderId: string; title: string }) => {
+    const id = await reminders.addSubtask(args.parentReminderId, args.title)
+    return { id }
+  })
   ipcMain.handle(CMD.workReminderTitleUpdate, async (_e, args: { reminderId: string; title: string }) => {
     await reminders.updateTitle(args.reminderId, args.title)
     return { ok: true }

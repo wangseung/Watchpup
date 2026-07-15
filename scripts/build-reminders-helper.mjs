@@ -4,7 +4,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const source = join(root, 'native', 'reminders-helper', 'main.swift')
+const sources = [
+  join(root, 'native', 'reminders-helper', 'main.swift'),
+  join(root, 'native', 'reminders-helper', 'ReminderKitBridge.swift'),
+]
 const infoPlist = join(root, 'native', 'reminders-helper', 'Info.plist')
 const output = join(root, 'dist', 'native', 'watchpup-reminders')
 const moduleCache = join(root, 'dist', 'native', '.module-cache')
@@ -12,7 +15,7 @@ const architecture = process.arch === 'x64' ? 'x86_64' : 'arm64'
 
 mkdirSync(moduleCache, { recursive: true })
 execFileSync('xcrun', [
-  'swiftc', source,
+  'swiftc', ...sources,
   '-o', output,
   '-parse-as-library',
   '-target', `${architecture}-apple-macosx14.0`,

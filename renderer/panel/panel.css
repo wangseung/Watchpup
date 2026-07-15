@@ -1715,6 +1715,9 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 }
 .work-create-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .work-create-actions button { padding: 5px 10px; font-size: 11px; }
+.work-sort-row { display: flex; gap: 6px; }
+.work-sort-row select { flex: 1 1 auto; min-width: 0; }
+#work-sort-reset { flex: 0 0 32px; padding: 0; }
 .work-filter-row { display: flex; align-items: center; gap: var(--sp-2); }
 .work-filter-row select { flex: 1 1 auto; min-width: 0; }
 .work-filter-row label {
@@ -1733,6 +1736,8 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-card.selected { background: var(--bg-elev); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
 .work-card.completed { opacity: .62; }
 .work-card-top { display: flex; align-items: flex-start; gap: 8px; }
+.work-drag { flex: 0 0 auto; color: var(--fg-faint); cursor: grab; font-size: 13px; line-height: 16px; }
+.work-child-mark { flex: 0 0 auto; color: var(--fg-faint); font-size: 11px; }
 .work-check {
   flex: 0 0 15px; width: 15px; height: 15px; margin-top: 1px;
   display: grid; place-items: center; border: 1.5px solid var(--border-strong); border-radius: 50%;
@@ -1794,6 +1799,11 @@ details.tools .section + .section { margin-top: var(--sp-4); }
 .work-identifiers { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 5px 10px; font-size: 10.5px; }
 .work-identifier-label { color: var(--fg-faint); }
 .work-identifier-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); font-family: var(--font-mono); user-select: text; }
+.work-subtasks { display: flex; flex-direction: column; gap: 6px; }
+.work-subtask-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--r-2); background: var(--bg-elev); cursor: pointer; }
+.work-subtask-row span:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+.work-subtask-form { display: flex; gap: 7px; }
+.work-subtask-form input { flex: 1 1 auto; min-width: 0; border: 1px solid var(--border); border-radius: var(--r-2); padding: 7px 9px; background: var(--bg-elev); color: var(--fg); }
 .work-links { display: flex; flex-direction: column; gap: 7px; }
 .work-link-row {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: 9px 10px;

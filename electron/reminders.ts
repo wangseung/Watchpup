@@ -7,7 +7,7 @@ import type { ReminderListRef, WorkItem } from '../src/core/work/types.js'
 
 const execFileAsync = promisify(execFile)
 
-export type ReminderCommand = 'lists' | 'tasks' | 'create' | 'update-title' | 'update-user-note' | 'set-completed' | 'append-link'
+export type ReminderCommand = 'lists' | 'tasks' | 'create' | 'add-subtask' | 'update-title' | 'update-user-note' | 'set-completed' | 'append-link'
 export type ReminderCommandRunner = (command: ReminderCommand, args: string[]) => Promise<string>
 
 function resolveHelperPath(): string {
@@ -71,6 +71,9 @@ export class ReminderGateway {
           dueAt: dateMs(row.dueAt),
           createdAt: dateMs(row.createdAt),
           updatedAt: dateMs(row.updatedAt),
+          parentId: typeof row.parentId === 'string' ? row.parentId : undefined,
+          childIds: Array.isArray(row.childIds) ? row.childIds.filter((id): id is string => typeof id === 'string') : [],
+          depth: typeof row.depth === 'number' ? row.depth : 0,
           links: parseWorkLinks(notes),
         } satisfies WorkItem
       })
@@ -95,6 +98,16 @@ export class ReminderGateway {
     const safeTitle = title.trim()
     if (!safeTitle) throw new Error('작업 제목을 입력해주세요.')
     await this.runCommand('update-title', [reminderId, safeTitle])
+  }
+
+  async addSubtask(parentReminderId: string, title: string): Promise<string> {
+    const safeTitle = title.trim()
+    if (!safeTitle) throw new Error('서브태스크 제목을 입력해주세요.')
+    const raw = await this.runCommand('add-subtask', [parentReminderId, safeTitle])
+    const result = JSON.parse(raw || '{}') as { id?: unknown }
+    const id = typeof result.id === 'string' ? result.id : ''
+    if (!id) throw new Error('생성된 서브태스크 ID를 확인하지 못했습니다.')
+    return id
   }
 
   async updateUserNote(reminderId: string, note: string): Promise<void> {

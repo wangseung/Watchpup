@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('watchpup', {
   workListSelect: (listId: string) => ipcRenderer.invoke(CMD.workListSelect, listId),
   workReminderCreate: (listId: string, title: string, notes = '') =>
     ipcRenderer.invoke(CMD.workReminderCreate, { listId, title, notes }),
+  workReminderSubtaskAdd: (parentReminderId: string, title: string) =>
+    ipcRenderer.invoke(CMD.workReminderSubtaskAdd, { parentReminderId, title }),
   workReminderTitleUpdate: (reminderId: string, title: string) =>
     ipcRenderer.invoke(CMD.workReminderTitleUpdate, { reminderId, title }),
   workReminderNoteUpdate: (reminderId: string, note: string) =>

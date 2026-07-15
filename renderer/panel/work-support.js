@@ -19,9 +19,10 @@ function compareOptionalDate(left, right, key, descending = false) {
 
 export function sortWorkItems(items, order = 'dueDateThenTitle', manualOrder = []) {
   const rows = [...items]
+  let sorted
   if (order === 'manual') {
     const positions = new Map(manualOrder.map((id, index) => [id, index]))
-    return rows.sort((left, right) => {
+    sorted = rows.sort((left, right) => {
       const a = positions.get(left.id)
       const b = positions.get(right.id)
       if (a != null && b != null) return a - b
@@ -29,11 +30,37 @@ export function sortWorkItems(items, order = 'dueDateThenTitle', manualOrder = [
       if (b != null) return 1
       return compareOptionalDate(left, right, 'dueAt')
     })
+  } else if (order === 'createdNewest') {
+    sorted = rows.sort((a, b) => compareOptionalDate(a, b, 'createdAt', true))
+  } else if (order === 'updatedNewest') {
+    sorted = rows.sort((a, b) => compareOptionalDate(a, b, 'updatedAt', true))
+  } else if (order === 'titleAscending') {
+    sorted = rows.sort(compareTitle)
+  } else {
+    sorted = rows.sort((a, b) => compareOptionalDate(a, b, 'dueAt'))
   }
-  if (order === 'createdNewest') return rows.sort((a, b) => compareOptionalDate(a, b, 'createdAt', true))
-  if (order === 'updatedNewest') return rows.sort((a, b) => compareOptionalDate(a, b, 'updatedAt', true))
-  if (order === 'titleAscending') return rows.sort(compareTitle)
-  return rows.sort((a, b) => compareOptionalDate(a, b, 'dueAt'))
+  return hierarchicalWorkItems(sorted)
+}
+
+function hierarchicalWorkItems(items) {
+  const ids = new Set(items.map((item) => item.id))
+  const children = new Map()
+  for (const item of items) {
+    if (!item.parentId || !ids.has(item.parentId)) continue
+    const rows = children.get(item.parentId) || []
+    rows.push(item)
+    children.set(item.parentId, rows)
+  }
+  const result = []
+  const visited = new Set()
+  const append = (item) => {
+    if (visited.has(item.id)) return
+    visited.add(item.id); result.push(item)
+    for (const child of children.get(item.id) || []) append(child)
+  }
+  for (const item of items) if (!item.parentId || !ids.has(item.parentId)) append(item)
+  for (const item of items) append(item)
+  return result
 }
 
 export function buildWorkPrompt({ item, issueNumber, listTitle, subtasks = [], parent = null }) {

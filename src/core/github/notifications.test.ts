@@ -23,12 +23,14 @@ function notification(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 describe('GitHub PR notifications', () => {
-  it('최근 72시간의 읽지 않은 PR만 최신순으로 만든다', () => {
+  it('최근 72시간 내 나에게 온 읽지 않은 리뷰 요청만 최신순으로 만든다', () => {
     const now = Date.parse('2026-07-15T04:00:00Z')
     const result = parseUnreadGithubPrNotifications(JSON.stringify([
       notification(),
       notification({ id: 'old', updated_at: '2026-07-10T03:00:00Z' }),
       notification({ id: 'read', unread: false }),
+      notification({ id: 'subscribed', reason: 'subscribed' }),
+      notification({ id: 'mention', reason: 'mention' }),
       notification({ id: 'issue', subject: { title: '이슈', type: 'Issue', url: 'https://api.github.com/repos/owner/repo/issues/1' } }),
     ]), now)
 
@@ -42,6 +44,7 @@ describe('GitHub PR notifications', () => {
       updatedAt: Date.parse('2026-07-15T03:00:00Z'),
     }])
     expect(githubPrNaggingLine(result[0])).toContain('owner/repo #42')
+    expect(githubPrNaggingLine(result[0])).toContain('리뷰 요청')
   })
 
   it('활성화했을 때만 GitHub 알림 API를 조회한다', async () => {

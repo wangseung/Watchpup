@@ -38,6 +38,8 @@ describe('잔소리 베타 설정', () => {
     const enabled = document.querySelector('input[name="githubPrNaggingEnabled"]')
     expect(enabled?.checked).toBe(true)
     expect(enabled?.closest('.nagging-github-pr')?.textContent).toContain('20분')
+    expect(enabled?.closest('.nagging-github-pr')?.textContent).toContain('review_requested')
+    expect(enabled?.closest('.nagging-github-pr')?.textContent).toContain('구독·멘션·참여 알림은 제외')
   })
 
   it('Xcode와 Android Studio 빌드 완료 알림을 각각 선택할 수 있다', () => {

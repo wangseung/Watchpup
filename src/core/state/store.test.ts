@@ -101,7 +101,7 @@ describe('StateStore', () => {
     const path = join(mkdtempSync(join(tmpdir(), 'watchpup-st-')), 'state.json')
     const s = new StateStore(path)
     const now = Date.now()
-    const item = { id: 'notification-1', title: 'PR', repository: 'owner/repo', number: 42, url: 'https://github.com/owner/repo/pull/42', reason: 'subscribed', updatedAt: now }
+    const item = { id: 'notification-1', title: 'PR', repository: 'owner/repo', number: 42, url: 'https://github.com/owner/repo/pull/42', reason: 'review_requested', updatedAt: now }
     s.enqueueNaggingGithubPr(item)
     s.enqueueNaggingGithubPr(item)
     expect(s.naggingGithubPr(now)).toEqual([item])
@@ -112,6 +112,9 @@ describe('StateStore', () => {
 
     const updated = { ...item, title: 'PR 업데이트', updatedAt: now + 1 }
     s.enqueueNaggingGithubPr(updated)
+    expect(new StateStore(path).naggingGithubPr(now + 1)).toEqual([updated])
+
+    s.enqueueNaggingGithubPr({ ...item, id: 'subscribed', reason: 'subscribed' })
     expect(new StateStore(path).naggingGithubPr(now + 1)).toEqual([updated])
   })
   it('remembers the latest three distinct Work nags and migrates the previous task id', () => {

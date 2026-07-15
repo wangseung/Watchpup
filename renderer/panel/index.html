@@ -390,7 +390,7 @@
               <ul class="nagging-priorities" aria-label="잔소리 우선순위">
                 <li><span>1</span>캘린더 일정 5분 전</li>
                 <li><span>2</span>Agent 작업 종료 후 반응이 없을 때</li>
-                <li><span>3</span>안 읽은 GitHub PR</li>
+                <li><span>3</span>나에게 리뷰 요청된 GitHub PR</li>
                 <li><span>4</span>구독한 Slack 새 소식</li>
                 <li><span>5</span>최근 열어본 미완료 Work 작업</li>
               </ul>
@@ -401,9 +401,9 @@
               <div class="nagging-github-pr">
                 <label class="checkbox">
                   <input type="checkbox" name="githubPrNaggingEnabled" checked />
-                  안 읽은 GitHub PR도 가끔 확인
+                  나에게 리뷰 요청된 GitHub PR도 가끔 확인
                 </label>
-                <p class="hint">로컬 <code>gh</code> 로그인으로 최근 72시간의 읽지 않은 PR 알림을 20분마다 확인합니다. 한 번 보여준 PR 업데이트는 반복하지 않아요.</p>
+                <p class="hint">로컬 <code>gh</code> 로그인으로 최근 72시간의 읽지 않은 <code>review_requested</code> 알림만 20분마다 확인합니다. 구독·멘션·참여 알림은 제외합니다.</p>
               </div>
               <div class="nagging-slack-news">
                 <label class="checkbox">

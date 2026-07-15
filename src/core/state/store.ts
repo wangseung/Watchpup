@@ -183,6 +183,7 @@ export class StateStore {
   }
 
   enqueueNaggingGithubPr(item: GithubPrNaggingItem): void {
+    if (item.reason !== 'review_requested') return
     const nagging = (this.state.nagging ??= {})
     const seenAt = nagging.githubPrSeen?.[item.id]
     if (Number.isFinite(seenAt) && seenAt! >= item.updatedAt) return
@@ -198,7 +199,9 @@ export class StateStore {
     const nagging = (this.state.nagging ??= {})
     const before = nagging.githubPrQueue ?? []
     const cutoff = now - 72 * 60 * 60 * 1000
-    const queue = before.filter((candidate) => Number.isFinite(candidate.updatedAt) && candidate.updatedAt >= cutoff)
+    const queue = before.filter((candidate) => candidate.reason === 'review_requested'
+      && Number.isFinite(candidate.updatedAt)
+      && candidate.updatedAt >= cutoff)
     if (queue.length !== before.length) {
       nagging.githubPrQueue = queue
       this.persist()

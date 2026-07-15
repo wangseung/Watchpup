@@ -73,7 +73,9 @@ export function parseUnreadGithubPrNotifications(
 
   const cutoff = now - recentMs
   return notifications.flatMap((notification): GithubPrNaggingItem[] => {
-    if (!notification.unread || notification.subject?.type !== 'PullRequest') return []
+    if (!notification.unread
+      || notification.reason !== 'review_requested'
+      || notification.subject?.type !== 'PullRequest') return []
     const id = notification.id?.trim()
     const title = notification.subject.title?.trim()
     const repository = notification.repository?.full_name?.trim()
@@ -97,7 +99,7 @@ export function githubPrNaggingLine(item: GithubPrNaggingItem, maxLength = 68): 
   const title = compact.length > maxLength
     ? `${compact.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
     : compact
-  return `GitHub에 아직 안 본 PR 있어요: “${title}” · ${item.repository} #${item.number}`
+  return `GitHub에 리뷰 요청이 왔어요: “${title}” · ${item.repository} #${item.number}`
 }
 
 export class GithubPrNotificationPoller {

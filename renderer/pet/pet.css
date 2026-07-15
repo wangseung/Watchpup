@@ -235,6 +235,8 @@ body.hud-align-right { align-items: flex-end; }
 
 /* ---- 말풍선 ---- */
 .bubble {
+  /* 새 말풍선이 나타날 때 아직 창 높이가 늘어나기 전이라도 내용 영역을 줄이지 않는다. */
+  flex: 0 0 auto;
   width: fit-content;
   max-width: min(var(--bubble-max-width), 100%);
   box-sizing: border-box;

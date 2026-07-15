@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { bubbleOpenTarget, bubbleSurfaceState, canIncomingBubbleReplaceStream, hudFoldContent } from './bubble-surface.js'
+
+const petCss = readFileSync(new URL('./pet.css', import.meta.url), 'utf8')
 
 describe('bubbleSurfaceState', () => {
   it('HUD가 켜져 있어도 임시 메시지는 독립 말풍선으로 표시한다', () => {
@@ -24,6 +27,12 @@ describe('bubbleSurfaceState', () => {
       hudMessageVisible: false,
       hudVisible: false,
     })
+  })
+})
+
+describe('bubble layout', () => {
+  it('창 높이가 갱신되기 전에도 말풍선 내용이 flex 축소되지 않는다', () => {
+    expect(petCss).toMatch(/\.bubble\s*\{[^}]*flex:\s*0 0 auto;/s)
   })
 })
 

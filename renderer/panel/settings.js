@@ -131,6 +131,45 @@ const showActivityHudInput = settingsForm.elements['showActivityHud']
 const hudSizeField = document.getElementById('hud-size-field')
 const hudAlignmentInput = settingsForm.elements['hudAlignment']
 const hudAlignmentField = document.getElementById('hud-alignment-field')
+const modelSelect = settingsForm.elements['model']
+const modelRefreshButton = document.getElementById('model-refresh')
+const modelHint = document.getElementById('model-hint')
+
+function renderModelOptions(current, available) {
+  const modelState = modelOptionsWithCurrent(current, available)
+  modelSelect.replaceChildren(...modelState.options.map(({ value, label, custom }) => {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = label
+    if (custom) option.dataset.custom = 'true'
+    return option
+  }))
+  modelSelect.value = modelState.selected
+}
+
+function modelCatalogHint(catalog) {
+  if (catalog.source === 'fallback') return `CLI 조회 실패 · 기본 목록 사용${catalog.error ? ` (${catalog.error})` : ''}`
+  const fetched = catalog.fetchedAt ? new Date(catalog.fetchedAt).toLocaleString('ko-KR') : ''
+  const cached = catalog.cached ? '마지막 조회' : '방금 조회'
+  return `${catalog.options.length}개 모델 · Claude CLI ${catalog.cliVersion} · ${cached}${fetched ? ` ${fetched}` : ''}`
+}
+
+async function loadModelCatalog(current, force = false) {
+  if (!modelSelect) return
+  modelRefreshButton.disabled = true
+  modelHint.textContent = force ? 'Claude CLI에서 모델 목록 새로고침 중…' : '모델 목록 확인 중…'
+  try {
+    const catalog = force ? await window.watchpup.modelCatalogRefresh() : await window.watchpup.modelCatalogGet()
+    renderModelOptions(modelSelect.value || current, catalog.options)
+    modelHint.textContent = modelCatalogHint(catalog)
+  } catch (error) {
+    modelHint.textContent = error?.message || 'Claude CLI 모델 목록을 읽지 못했습니다.'
+  } finally {
+    modelRefreshButton.disabled = false
+  }
+}
+
+modelRefreshButton?.addEventListener('click', () => loadModelCatalog(modelSelect.value, true))
 
 function updatePetSizeLabel() {
   if (petSizeInput && petSizeValue) petSizeValue.textContent = `${petSizeInput.value}%`
@@ -185,16 +224,8 @@ async function loadSettings() {
   settingsForm.elements['obsidian.vaultPath'].value = cfg.obsidian?.vaultPath || ''
   settingsForm.elements['obsidian.folder'].value = cfg.obsidian?.folder || ''
   updateObsidianHint()
-  const modelSelect = settingsForm.elements['model']
-  const modelState = modelOptionsWithCurrent(cfg.model)
-  modelSelect.replaceChildren(...modelState.options.map(({ value, label, custom }) => {
-    const option = document.createElement('option')
-    option.value = value
-    option.textContent = label
-    if (custom) option.dataset.custom = 'true'
-    return option
-  }))
-  modelSelect.value = modelState.selected
+  renderModelOptions(cfg.model)
+  void loadModelCatalog(cfg.model)
   await refreshTokenStatus()
   await renderGroups()
   await renderRepos()

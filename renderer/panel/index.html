@@ -262,11 +262,14 @@
               </div>
               <p class="petimg-hint">각 스레드를 재검사해, 실제로 나(또는 내 그룹)를 멘션하지 않은 항목(예: GitHub의 평문 @org/repo 오탐)을 제거합니다. 확인 못 한 건 보존.</p>
             </fieldset>
-            <label>
-              Claude 모델
-              <select name="model" aria-describedby="model-hint"></select>
-              <span id="model-hint" class="field-hint">Claude Code의 최신 모델 별칭입니다. 계정·플랜에 따라 사용 가능 여부가 다를 수 있어요.</span>
-            </label>
+            <div class="model-setting">
+              <div class="model-setting-head">
+                <label for="model-select">Claude 모델</label>
+                <button type="button" id="model-refresh">↻ CLI에서 새로고침</button>
+              </div>
+              <select id="model-select" name="model" aria-describedby="model-hint"></select>
+              <span id="model-hint" class="field-hint">Claude CLI에서 계정의 모델 목록을 확인합니다.</span>
+            </div>
           </div>
 
           <div class="sset" data-sset="pet">

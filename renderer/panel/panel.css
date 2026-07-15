@@ -1282,6 +1282,10 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); 
   font-weight: 500;
   line-height: 1.45;
 }
+.model-setting { display: flex; flex-direction: column; gap: 6px; }
+.model-setting-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.model-setting-head label { color: var(--fg-muted); font-size: 11.5px; font-weight: 600; }
+.model-setting-head button { padding: 4px 8px; font-size: 10.5px; }
 
 /* 입력 컨트롤 통일 */
 #settings-form input:not([type="checkbox"]),

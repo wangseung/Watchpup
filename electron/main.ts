@@ -32,6 +32,7 @@ import { resolveWatchpupConfigPath } from '../src/core/config/path.js'
 import { ReminderGateway } from './reminders.js'
 import { WorkStatusService } from './work-status.js'
 import { focusVisiblePanel, setPanelSwitcherVisibility } from './panel-activation.js'
+import { ClaudeModelCatalogService } from '../src/core/agent/model-catalog.js'
 
 let pet: BrowserWindow | null = null
 let panel: BrowserWindow | null = null
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
   const lessons = new LessonStore(join(config.dataDir, 'lessons.json'))
   const reminders = new ReminderGateway()
   const workStatus = new WorkStatusService(configStore, keychain)
+  const modelCatalog = new ClaudeModelCatalogService(join(config.dataDir, 'claude-models.json'))
   const deps = {
     config,
     sessions,
@@ -95,6 +97,8 @@ async function main(): Promise<void> {
   // 렌더러가 창 로드 직후 요청하는 초기 설정 핸들러는 창을 만들기 전에 등록한다.
   // 늦게 등록하면 첫 요청이 실패한 뒤 기본 UI 값(100%)이 그대로 남을 수 있다.
   ipcMain.handle(CMD.settingsGet, () => configStore.get())
+  ipcMain.handle(CMD.modelCatalogGet, () => modelCatalog.get())
+  ipcMain.handle(CMD.modelCatalogRefresh, () => modelCatalog.refresh())
   ipcMain.handle(CMD.workLists, async () => {
     const lists = await reminders.lists()
     const current = configStore.get()

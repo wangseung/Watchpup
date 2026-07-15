@@ -10,6 +10,8 @@ export const CMD = {
   chatSend: 'chat.send',
   settingsGet: 'settings.get',
   settingsSet: 'settings.set',
+  modelCatalogGet: 'model.catalog.get',
+  modelCatalogRefresh: 'model.catalog.refresh',
   tokensGet: 'tokens.get',
   tokensSet: 'tokens.set',
   playbooksList: 'playbooks.list',

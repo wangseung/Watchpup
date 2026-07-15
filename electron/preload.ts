@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('watchpup', {
   chatSend: (id: string, text: string) => ipcRenderer.invoke(CMD.chatSend, { mentionId: id, text }),
   settingsGet: () => ipcRenderer.invoke(CMD.settingsGet),
   settingsSet: (patch: SettingsPatch) => ipcRenderer.invoke(CMD.settingsSet, patch),
+  modelCatalogGet: () => ipcRenderer.invoke(CMD.modelCatalogGet),
+  modelCatalogRefresh: () => ipcRenderer.invoke(CMD.modelCatalogRefresh),
   tokensGet: () => ipcRenderer.invoke(CMD.tokensGet),
   tokensSet: (patch: TokensPatch) => ipcRenderer.invoke(CMD.tokensSet, patch),
   playbooksList: () => ipcRenderer.invoke(CMD.playbooksList),

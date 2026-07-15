@@ -1,5 +1,5 @@
 import { activityStateLabel, formatElapsed } from './activity-format.js'
-import { bubbleOpenTarget, bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
+import { bubbleOpenTarget, bubbleSurfaceState, canIncomingBubbleReplaceStream, hudFoldContent } from './bubble-surface.js'
 
 const pet = document.getElementById('pet')
 const petImg = document.getElementById('pet-img')
@@ -403,6 +403,21 @@ setInterval(() => renderActivities(activities), 30_000)
 let bubbleTimer = null
 let chatStreaming = false
 let chatBuf = ''
+let chatStartTimer = null
+const CHAT_START_TIMEOUT_MS = 60_000
+
+function clearChatStartTimer() {
+  if (!chatStartTimer) return
+  clearTimeout(chatStartTimer)
+  chatStartTimer = null
+}
+
+function finishChatStreaming() {
+  clearChatStartTimer()
+  chatStreaming = false
+  bubble.classList.remove('streaming')
+  hudMessage.classList.remove('streaming')
+}
 
 function renderBubbleSurface() {
   const state = bubbleSurfaceState({ active: bubbleActive, showActivityHud, activityCount: activityList.childElementCount })
@@ -469,7 +484,8 @@ window.watchpup.onBubble((payload) => {
   const calendarPrivacy = typeof payload === 'object' && payload ? payload.calendarPrivacy === true : false
   const slackNewsUrl = typeof payload === 'object' && payload ? payload.slackNewsUrl : null
   if (typeof text !== 'string' || !text) return
-  if (chatStreaming) return
+  if (!canIncomingBubbleReplaceStream(chatStreaming, chatBuf)) return
+  if (chatStreaming) finishChatStreaming()
   bubbleMentionId = id || null
   bubbleWorkItemId = workItemId || null
   bubbleActivityId = activityId || null
@@ -489,26 +505,30 @@ window.watchpup.onChatBubble((ev) => {
   if (!ev || typeof ev !== 'object') return
   const type = ev.type
   if (type === 'start') {
+    clearChatStartTimer()
     chatStreaming = true
     chatBuf = ''
     bubble.classList.add('streaming')
     hudMessage.classList.add('streaming')
-    showBubble('…', null)
+    showBubble('답변을 준비하고 있어요…', null)
+    chatStartTimer = setTimeout(() => {
+      chatStartTimer = null
+      if (!chatStreaming || chatBuf) return
+      finishChatStreaming()
+      hideBubbleSurface()
+    }, CHAT_START_TIMEOUT_MS)
     return
   }
   if (type === 'progress' || type === 'assistant_text') {
+    clearChatStartTimer()
     chatStreaming = true
     chatBuf += ev.text || ''
-    showBubble(chatBuf || '…', null)
+    showBubble(chatBuf || '답변을 준비하고 있어요…', null)
   } else if (type === 'result') {
-    chatStreaming = false
-    bubble.classList.remove('streaming')
-    hudMessage.classList.remove('streaming')
+    finishChatStreaming()
     showBubble(ev.text || chatBuf || '(빈 응답)', 20000)
   } else if (type === 'error') {
-    chatStreaming = false
-    bubble.classList.remove('streaming')
-    hudMessage.classList.remove('streaming')
+    finishChatStreaming()
     showBubble('오류: ' + (ev.message || '알 수 없음'), 9000)
   }
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bubbleOpenTarget, bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
+import { bubbleOpenTarget, bubbleSurfaceState, canIncomingBubbleReplaceStream, hudFoldContent } from './bubble-surface.js'
 
 describe('bubbleSurfaceState', () => {
   it('HUD가 켜져 있어도 임시 메시지는 독립 말풍선으로 표시한다', () => {
@@ -24,6 +24,16 @@ describe('bubbleSurfaceState', () => {
       hudMessageVisible: false,
       hudVisible: false,
     })
+  })
+})
+
+describe('canIncomingBubbleReplaceStream', () => {
+  it('텍스트가 오기 전 대기 placeholder는 실제 잔소리가 교체할 수 있다', () => {
+    expect(canIncomingBubbleReplaceStream(true, '')).toBe(true)
+  })
+
+  it('실제 답변이 스트리밍 중이면 잔소리가 가로채지 않는다', () => {
+    expect(canIncomingBubbleReplaceStream(true, '답변 작성 중')).toBe(false)
   })
 })
 

@@ -102,6 +102,7 @@ export function runClaude(opts: RunOptions): Promise<AgentResult> {
   let sessionId = opts.sessionId
   let costUsd: number | undefined
   let isError = false
+  let sawResult = false
   const toolsUsed: string[] = []
 
   const dispatch = (events: AgentStreamEvent[]): void => {
@@ -109,6 +110,7 @@ export function runClaude(opts: RunOptions): Promise<AgentResult> {
       if (e.type === 'system' && e.sessionId) sessionId = e.sessionId
       else if (e.type === 'tool') toolsUsed.push(e.name)
       else if (e.type === 'result') {
+        sawResult = true
         finalText = e.text
         if (e.sessionId) sessionId = e.sessionId
         costUsd = e.costUsd
@@ -159,6 +161,12 @@ export function runClaude(opts: RunOptions): Promise<AgentResult> {
       }
       if (code !== 0 && !finalText) {
         const msg = stderr.trim() || `claude 종료코드 ${code}`
+        opts.onEvent?.({ type: 'error', message: msg })
+        finish({ text: msg, sessionId, costUsd, isError: true, toolsUsed })
+        return
+      }
+      if (!sawResult) {
+        const msg = 'Claude가 응답을 완료하지 못했습니다.'
         opts.onEvent?.({ type: 'error', message: msg })
         finish({ text: msg, sessionId, costUsd, isError: true, toolsUsed })
         return

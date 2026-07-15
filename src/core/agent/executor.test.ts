@@ -48,4 +48,23 @@ describe('runClaude', () => {
     expect(res.isError).toBe(false)
     expect(events).toContain('result')
   })
+
+  it('정상 종료했지만 result 이벤트가 없으면 error로 스트림을 끝낸다', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'watchpup-empty-bin-'))
+    const emptyBin = join(dir, 'empty-claude.mjs')
+    writeFileSync(emptyBin, `#!/usr/bin/env node
+process.stdin.resume(); process.stdin.on('end',()=>process.exit(0))`)
+    chmodSync(emptyBin, 0o755)
+    process.env.WATCHPUP_CLAUDE_BIN = emptyBin
+    const cfg = parseConfig({ workDir: dir, dataDir: dir })
+    const events: string[] = []
+
+    const res = await runClaude({
+      prompt: 'test', config: cfg, agents: {}, allowedTools: [], disallowedTools: [],
+      systemPrompt: 'sys', isResume: false, onEvent: (e) => events.push(e.type),
+    })
+
+    expect(res.isError).toBe(true)
+    expect(events.at(-1)).toBe('error')
+  })
 })

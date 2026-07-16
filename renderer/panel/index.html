@@ -324,6 +324,17 @@
                 <span>크게</span>
               </span>
             </label>
+            <div class="bubble-behavior-row">
+              <label>
+                최대 말풍선
+                <span class="bubble-number"><input type="number" name="bubbleStackCount" min="1" max="5" step="1" value="3" /><span>개</span></span>
+              </label>
+              <label>
+                노출 시간
+                <span class="bubble-number"><input type="number" name="bubbleDurationSeconds" min="3" max="60" step="1" value="10" /><span>초</span></span>
+              </label>
+            </div>
+            <span class="field-hint">새 말풍선은 펫 가까이에 쌓이고, 오래된 항목부터 사라집니다.</span>
             <label class="checkbox">
               <input type="checkbox" name="showActivityHud" />
               세션 HUD 표시
@@ -381,16 +392,24 @@
                 <input type="checkbox" name="naggingEnabled" />
                 시도 때도 없이 말 걸기
               </label>
-              <p class="nagging-copy">놓치기 쉬운 타이밍을 먼저 잡고, 평소에는 Work 작업이나 구독한 Slack 새 소식을 몇 분 단위로 다시 꺼내줘요. 기본값은 꺼짐입니다.</p>
+              <p class="nagging-copy">놓치기 쉬운 타이밍을 먼저 잡고, 평소에는 Work 작업이나 GitHub PR, 구독한 Slack 새 소식을 몇 분 단위로 다시 꺼내줘요. 기본값은 꺼짐입니다.</p>
               <ul class="nagging-priorities" aria-label="잔소리 우선순위">
                 <li><span>1</span>캘린더 일정 5분 전</li>
                 <li><span>2</span>Agent 작업 종료 후 반응이 없을 때</li>
-                <li><span>3</span>구독한 Slack 새 소식</li>
-                <li><span>4</span>최근 열어본 미완료 Work 작업</li>
+                <li><span>3</span>나에게 리뷰 요청된 GitHub PR</li>
+                <li><span>4</span>구독한 Slack 새 소식</li>
+                <li><span>5</span>최근 열어본 미완료 Work 작업</li>
               </ul>
               <div class="nagging-calendar-access">
-                <span>처음 활성화하면 macOS 캘린더 접근 권한을 요청합니다.</span>
-                <button type="button" id="nagging-calendar-settings">캘린더 권한 설정</button>
+                <span>일정 알림을 쓰고 싶을 때만 macOS 캘린더를 연결합니다.</span>
+                <button type="button" id="nagging-calendar-settings">캘린더 연결</button>
+              </div>
+              <div class="nagging-github-pr">
+                <label class="checkbox">
+                  <input type="checkbox" name="githubPrNaggingEnabled" checked />
+                  나에게 리뷰 요청된 GitHub PR도 가끔 확인
+                </label>
+                <p class="hint">로컬 <code>gh</code> 로그인으로 최근 72시간의 읽지 않은 <code>review_requested</code> 알림만 20분마다 확인합니다. 구독·멘션·참여 알림은 제외합니다.</p>
               </div>
               <div class="nagging-slack-news">
                 <label class="checkbox">
@@ -407,7 +426,7 @@
                     <textarea name="slackNewsKeywords" rows="3" placeholder="iOS, 장애, 신규 기능"></textarea>
                   </label>
                 </div>
-                <p class="hint">쉼표나 줄바꿈으로 구분합니다. 처음 켤 때는 현재 최신 글을 기준으로 잡고, 이후 새 루트 글만 알려줘요. Slack User Token의 <code>search:read</code> 권한이 필요합니다.</p>
+                <p class="hint">쉼표나 줄바꿈으로 구분합니다. 각 채널·키워드는 20분마다 확인해요. 처음 켤 때는 현재 최신 글을 기준으로 잡고, 이후 새 루트 글만 알려줍니다. Slack User Token의 <code>search:read</code> 권한이 필요합니다.</p>
               </div>
               <div class="nagging-interval-row">
                 <label>
@@ -420,7 +439,26 @@
                   <span class="nagging-number"><input type="number" name="naggingMaxMinutes" min="1" max="120" step="1" value="12" /><span>분</span></span>
                 </label>
               </div>
-              <p id="nagging-hint" class="hint">활성화하면 캘린더 접근 권한을 요청하고, 5~12분 사이의 랜덤한 시점에 Work나 Slack 소식 말풍선이 나타납니다.</p>
+              <p id="nagging-hint" class="hint">활성화하면 5~12분 사이의 랜덤한 시점에 Work·GitHub PR·Slack 소식 말풍선이 나타납니다. 캘린더는 별도로 연결한 경우에만 확인합니다.</p>
+            </fieldset>
+            <fieldset class="build-alert-card">
+              <legend>빌드 완료 알림 <span class="beta-badge">Beta</span></legend>
+              <label class="checkbox build-alert-toggle">
+                <input type="checkbox" name="buildAlertsEnabled" />
+                IDE 빌드가 끝나면 바로 말 걸기
+              </label>
+              <p class="nagging-copy">로컬 빌드 로그의 변경분만 확인해 성공·실패를 알려줘요. 외부 API를 호출하지 않으며, 말풍선을 누르면 해당 IDE가 앞으로 옵니다.</p>
+              <div class="build-alert-tools">
+                <label class="checkbox">
+                  <input type="checkbox" name="xcodeBuildAlertsEnabled" checked />
+                  Xcode
+                </label>
+                <label class="checkbox">
+                  <input type="checkbox" name="androidBuildAlertsEnabled" checked />
+                  Android Studio
+                </label>
+              </div>
+              <p id="build-alert-hint" class="hint">현재 꺼져 있어요. 활성화 이후 완료되는 새 빌드부터 알려줍니다.</p>
             </fieldset>
             <fieldset class="nagging-debug-card">
               <legend>디버그 로그</legend>

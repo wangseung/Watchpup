@@ -77,6 +77,9 @@ export const watchpupConfigSchema = z.object({
   petSizePercent: z.number().int().min(50).max(200).default(100),
   // 펫 위에 잠깐 표시되는 상태/분석 말풍선 크기(%).
   bubbleSizePercent: z.number().int().min(60).max(140).default(100),
+  // 동시에 보이는 말풍선 최대 개수와 일반 말풍선 노출 시간.
+  bubbleStackCount: z.number().int().min(1).max(5).default(3),
+  bubbleDurationSeconds: z.number().int().min(3).max(60).default(10),
   // 펫 아래에 표시되는 Claude/Codex/Slack 세션 HUD 크기(%).
   hudSizePercent: z.number().int().min(60).max(140).default(100),
   // 펫·말풍선·HUD가 공유하는 가로 기준선. 화면 오른쪽 배치를 고려해 오른쪽이 기본.
@@ -87,10 +90,16 @@ export const watchpupConfigSchema = z.object({
   naggingEnabled: z.boolean().default(false),
   naggingMinMinutes: z.number().int().min(1).max(120).default(5),
   naggingMaxMinutes: z.number().int().min(1).max(120).default(12),
+  // 로컬 GitHub CLI의 읽지 않은 최근 PR 알림을 잔소리 후보에 섞는다.
+  githubPrNaggingEnabled: z.boolean().default(true),
   // 구독한 Slack 채널·키워드의 새 루트 메시지를 무작위 잔소리에 섞는다.
   slackNewsEnabled: z.boolean().default(false),
   slackNewsChannels: z.array(z.string()).default(['all_전사공유', 'all_전사공지', 'all_random']),
   slackNewsKeywords: z.array(z.string()).default([]),
+  // Xcode·Android Studio의 로컬 빌드 로그 변경을 감지해 완료 즉시 말풍선으로 알린다.
+  buildAlertsEnabled: z.boolean().default(false),
+  xcodeBuildAlertsEnabled: z.boolean().default(true),
+  androidBuildAlertsEnabled: z.boolean().default(true),
   // Work 탭에서 사용할 Apple Reminders 목록. Watchpup이 자체적으로 선택을 저장한다.
   reminderListId: z.string().default(''),
   reminderListName: z.string().default(''),

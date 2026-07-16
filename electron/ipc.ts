@@ -17,6 +17,7 @@ export const CMD = {
   modelCatalogRefresh: 'model.catalog.refresh',
   naggingLogList: 'nagging.log.list',
   naggingLogClear: 'nagging.log.clear',
+  calendarAccessRequest: 'calendar.access.request',
   tokensGet: 'tokens.get',
   tokensSet: 'tokens.set',
   playbooksList: 'playbooks.list',
@@ -53,6 +54,8 @@ export const EVT = {
   petCodex: 'pet.codex',
   petSize: 'pet.size',
   bubbleSize: 'bubble.size',
+  bubbleStackCount: 'bubble.stackCount',
+  bubbleDuration: 'bubble.duration',
   hudSize: 'hud.size',
   hudAlignment: 'hud.alignment',
   hudVisibility: 'hud.visibility',
@@ -118,15 +121,21 @@ export interface SettingsPatch {
   petAlwaysOnTop?: boolean
   petSizePercent?: number
   bubbleSizePercent?: number
+  bubbleStackCount?: number
+  bubbleDurationSeconds?: number
   hudSizePercent?: number
   hudAlignment?: 'left' | 'right'
   showActivityHud?: boolean
   naggingEnabled?: boolean
   naggingMinMinutes?: number
   naggingMaxMinutes?: number
+  githubPrNaggingEnabled?: boolean
   slackNewsEnabled?: boolean
   slackNewsChannels?: string[]
   slackNewsKeywords?: string[]
+  buildAlertsEnabled?: boolean
+  xcodeBuildAlertsEnabled?: boolean
+  androidBuildAlertsEnabled?: boolean
   petImageDir?: string
   petCodexDir?: string
   persona?: string

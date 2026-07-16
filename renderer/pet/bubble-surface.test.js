@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { bubbleOpenTarget, bubbleSurfaceState, canIncomingBubbleReplaceStream, hudFoldContent } from './bubble-surface.js'
+import { bubbleOpenTarget, bubbleSurfaceState, hudFoldContent } from './bubble-surface.js'
 
 const petCss = readFileSync(new URL('./pet.css', import.meta.url), 'utf8')
 
@@ -34,15 +34,10 @@ describe('bubble layout', () => {
   it('창 높이가 갱신되기 전에도 말풍선 내용이 flex 축소되지 않는다', () => {
     expect(petCss).toMatch(/\.bubble\s*\{[^}]*flex:\s*0 0 auto;/s)
   })
-})
 
-describe('canIncomingBubbleReplaceStream', () => {
-  it('텍스트가 오기 전 대기 placeholder는 실제 잔소리가 교체할 수 있다', () => {
-    expect(canIncomingBubbleReplaceStream(true, '')).toBe(true)
-  })
-
-  it('실제 답변이 스트리밍 중이면 잔소리가 가로채지 않는다', () => {
-    expect(canIncomingBubbleReplaceStream(true, '답변 작성 중')).toBe(false)
+  it('여러 말풍선을 간격이 있는 세로 스택으로 배치한다', () => {
+    expect(petCss).toMatch(/\.bubble-stack\s*\{[^}]*flex-direction:\s*column;/s)
+    expect(petCss).toMatch(/\.bubble-stack\s*\{[^}]*gap:\s*8px;/s)
   })
 })
 
@@ -85,10 +80,15 @@ describe('bubbleOpenTarget', () => {
     expect(bubbleOpenTarget(null, null, null, false, true)).toEqual({ kind: 'calendar-privacy' })
   })
 
-  it('Slack 소식 잔소리는 원문 링크를 연다', () => {
+  it('Slack이나 GitHub 잔소리는 외부 원문 링크를 연다', () => {
     expect(bubbleOpenTarget(null, null, null, false, false, 'https://workspace.slack.com/archives/C1/p1')).toEqual({
       kind: 'external',
       url: 'https://workspace.slack.com/archives/C1/p1',
     })
+  })
+
+  it('빌드 완료 말풍선은 해당 IDE를 연다', () => {
+    expect(bubbleOpenTarget(null, null, null, false, false, null, 'xcode')).toEqual({ kind: 'build-tool', tool: 'xcode' })
+    expect(bubbleOpenTarget(null, null, null, false, false, null, 'android')).toEqual({ kind: 'build-tool', tool: 'android' })
   })
 })

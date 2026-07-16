@@ -62,6 +62,8 @@ body {
 
 body.hud-align-left { align-items: flex-start; }
 body.hud-align-right { align-items: flex-end; }
+body.hud-align-left .bubble-stack { align-items: flex-start; }
+body.hud-align-right .bubble-stack { align-items: flex-end; }
 
 /* ---- 최근 Claude / Codex / Slack 활동 ---- */
 .activity-hud {
@@ -234,6 +236,18 @@ body.hud-align-right { align-items: flex-end; }
 }
 
 /* ---- 말풍선 ---- */
+.bubble-stack {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  max-width: var(--bubble-max-width);
+  pointer-events: none;
+}
+.bubble-stack.hidden { display: none; }
+
 .bubble {
   /* 새 말풍선이 나타날 때 아직 창 높이가 늘어나기 전이라도 내용 영역을 줄이지 않는다. */
   flex: 0 0 auto;
@@ -260,6 +274,7 @@ body.hud-align-right { align-items: flex-end; }
   word-break: break-word;
   white-space: pre-wrap;
   text-align: left;
+  appearance: none;
 }
 
 .bubble.clickable { border-color: var(--accent); }

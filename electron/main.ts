@@ -2,6 +2,7 @@ import { app, ipcMain, Tray, nativeImage, clipboard, screen, shell, dialog, Brow
 import { join, basename } from 'node:path'
 import { existsSync, readdirSync, readFileSync, statSync, cpSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { execFile } from 'node:child_process'
 import { keychain, SecretKeys } from '../src/core/secrets/keychain.js'
 import { ConfigStore } from '../src/core/config/store.js'
 import { SessionStore } from '../src/core/session/store.js'
@@ -54,11 +55,17 @@ import { WorkStatusService } from './work-status.js'
 import { focusVisiblePanel, setPanelSwitcherVisibility } from './panel-activation.js'
 import { ClaudeModelCatalogService } from '../src/core/agent/model-catalog.js'
 import { ensureOpenAtLogin } from './login-item.js'
+import { GithubPrNotificationPoller, githubPrNaggingLine } from '../src/core/github/notifications.js'
+import { BuildCompletionPoller, buildCompletionLine, type BuildTool } from '../src/core/build/completion-poller.js'
+import { startupSlackSecrets } from '../src/core/startup/access.js'
+import type { CalendarAuthorizationStatus } from './reminders.js'
 
 let pet: BrowserWindow | null = null
 let panel: BrowserWindow | null = null
 let gateway: WatchpupGateway | null = null
 let agentPoller: LocalAgentPoller | null = null
+let githubPrPoller: GithubPrNotificationPoller | null = null
+let buildCompletionPoller: BuildCompletionPoller | null = null
 let unread = 0
 let lastActivity = Date.now()
 let isQuitting = false
@@ -104,6 +111,31 @@ async function main(): Promise<void> {
   const reminders = new ReminderGateway()
   const workStatus = new WorkStatusService(configStore, keychain)
   const modelCatalog = new ClaudeModelCatalogService(join(config.dataDir, 'claude-models.json'))
+  let calendarAccessStatus: CalendarAuthorizationStatus | null = null
+  githubPrPoller = new GithubPrNotificationPoller(
+    () => {
+      const current = configStore.get()
+      return { enabled: current.naggingEnabled && current.githubPrNaggingEnabled }
+    },
+    (item) => state.enqueueNaggingGithubPr(item),
+  )
+  buildCompletionPoller = new BuildCompletionPoller(
+    () => {
+      const current = configStore.get()
+      return {
+        enabled: current.buildAlertsEnabled,
+        xcodeEnabled: current.xcodeBuildAlertsEnabled,
+        androidEnabled: current.androidBuildAlertsEnabled,
+      }
+    },
+    (event) => {
+      const key = `build:${event.id}`
+      if (state.seen(key)) return
+      state.markSeen(key)
+      send(pet, EVT.bubble, { text: buildCompletionLine(event), buildTool: event.tool })
+      lastActivity = Date.now()
+    },
+  )
   const deps = {
     config,
     sessions,
@@ -366,6 +398,14 @@ async function main(): Promise<void> {
   ipcMain.on('calendar.privacy.open', () => {
     void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars')
   })
+  ipcMain.handle(CMD.calendarAccessRequest, async () => {
+    calendarAccessStatus = await reminders.requestCalendarAccess()
+    return calendarAccessStatus
+  })
+  ipcMain.on('build.tool.open', (_e, tool: BuildTool) => {
+    const bundleId = tool === 'xcode' ? 'com.apple.dt.Xcode' : tool === 'android' ? 'com.google.android.studio' : ''
+    if (bundleId) execFile('/usr/bin/open', ['-b', bundleId], () => {})
+  })
   // permalink 등 외부 링크는 기본 브라우저로 (창 네비게이션 방지)
   ipcMain.on('open.external', (_e, url: string) => {
     if (typeof url === 'string' && /^https?:\/\//.test(url)) void shell.openExternal(url)
@@ -388,7 +428,11 @@ async function main(): Promise<void> {
   ipcMain.handle('mention.remove', (_e, id: string) => {
     gateway?.removeMention(id)
   })
-  ipcMain.handle('mention.cleanupFalse', () => (gateway ? gateway.cleanupFalseMentions() : Promise.resolve({ removed: 0, checked: 0 })))
+  ipcMain.handle('mention.cleanupFalse', async () => {
+    if (!gateway) return { removed: 0, checked: 0 }
+    await ensureSlackUserToken()
+    return gateway.cleanupFalseMentions()
+  })
   ipcMain.handle('mention.setCategory', (_e, a: { mentionId: string; category: string }) => {
     gateway?.setCategory(a.mentionId, a.category)
   })
@@ -454,9 +498,11 @@ async function main(): Promise<void> {
     }
   })
   // 스레드 대화 즉석 조회(예전 멘션은 thread가 없을 수 있음)
-  ipcMain.handle('thread.get', (_e, id: string, refresh = false) =>
-    gateway ? gateway.getThread(id, !!refresh) : Promise.resolve([]),
-  )
+  ipcMain.handle('thread.get', async (_e, id: string, refresh = false) => {
+    if (!gateway) return []
+    if (refresh) await ensureSlackUserToken()
+    return gateway.getThread(id, !!refresh)
+  })
 
   // 코드 레포: 목록·추가(폴더 선택)·삭제 — 코드 원인 조사에 사용(claude --add-dir)
   ipcMain.handle('repos.list', () => configStore.get().repos)
@@ -495,6 +541,7 @@ async function main(): Promise<void> {
     if (!gateway) return { error: '먼저 슬랙 연결이 필요합니다 (재시작 후).' }
     if (!cfg.mySlackUserId) return { error: 'mySlackUserId 를 먼저 저장하세요.' }
     try {
+      await ensureSlackUserToken()
       const found = await gateway.researchGroups(cfg.mySlackUserId)
       const myGroups = found.map((g) => ({ id: g.id, handle: g.handle }))
       const c = configStore.update({ myGroups })
@@ -526,7 +573,7 @@ async function main(): Promise<void> {
     const requestedWidth = typeof value === 'number' ? b.width : value?.width
     if (typeof requestedHeight !== 'number' || typeof requestedWidth !== 'number') return
     const workArea = screen.getDisplayMatching(b).workArea
-    const h = Math.max(164, Math.min(800, Math.round(requestedHeight)))
+    const h = Math.max(164, Math.min(workArea.height, 1200, Math.round(requestedHeight)))
     const w = Math.max(340, Math.min(workArea.width, 860, Math.round(requestedWidth)))
     if (h === b.height && w === b.width) return
     const bottom = b.y + b.height
@@ -650,12 +697,11 @@ async function main(): Promise<void> {
     lastActivity = Date.now() // 다음 혼잣말까지 간격 확보
   }, 4 * 60 * 1000)
 
-  // 베타 `잔소리`: 캘린더 임박 일정 → 확인하지 않은 Agent 완료 → Slack 소식/Work 순서로 상기한다.
+  // 베타 `잔소리`: 캘린더 임박 일정 → 확인하지 않은 Agent 완료 → GitHub PR/Slack 소식/Work 순서로 상기한다.
   // 다음 예정 시각과 이미 알린 대상을 저장해 앱 재실행 뒤에도 중복 알림을 피한다.
   let naggingTimer: NodeJS.Timeout | null = null
   let priorityNaggingBusy = false
   let calendarRetryAt = 0
-  let calendarPermissionNagged = false
 
   function showNagging(kind: NaggingLogKind, text: string, payload: Record<string, unknown>, context?: string): void {
     const entry: NaggingLogEntry = { at: Date.now(), kind, text, ...(context ? { context } : {}) }
@@ -693,22 +739,20 @@ async function main(): Promise<void> {
       const now = Date.now()
       if (now >= calendarRetryAt) {
         try {
-          const events = await reminders.upcomingEvents(now - 60_000, now + 6 * 60_000)
-          const event = pickCalendarNaggingEvent(events, state.naggingCalendarNotified(), now)
-          if (event) {
-            state.markNaggingCalendar(calendarEventKey(event), now)
-            showNagging('calendar', calendarNaggingLine(event, now), { calendarEvent: true }, event.title)
-            lastActivity = now
-            return true
+          calendarAccessStatus ??= await reminders.calendarAuthorizationStatus()
+          if (calendarAccessStatus === 'authorized') {
+            const events = await reminders.upcomingEvents(now - 60_000, now + 6 * 60_000)
+            const event = pickCalendarNaggingEvent(events, state.naggingCalendarNotified(), now)
+            if (event) {
+              state.markNaggingCalendar(calendarEventKey(event), now)
+              showNagging('calendar', calendarNaggingLine(event, now), { calendarEvent: true }, event.title)
+              lastActivity = now
+              return true
+            }
           }
         } catch (error) {
           calendarRetryAt = now + 15 * 60_000
           console.warn('잔소리 캘린더 조회 실패', error)
-          if (!calendarPermissionNagged && String((error as Error)?.message || error).includes('캘린더 전체 접근 권한')) {
-            calendarPermissionNagged = true
-            showNagging('calendar', '캘린더 일정도 알려주려면 권한이 필요해요. 눌러서 허용해줘!', { calendarPrivacy: true }, '캘린더 권한')
-            return true
-          }
         }
       }
 
@@ -735,15 +779,25 @@ async function main(): Promise<void> {
       if (!current.naggingEnabled || !pet || pet.isDestroyed()) return
       if (await runPriorityNagging()) return
       const items = current.reminderListId
-        ? await reminders.tasks(current.reminderListId, false)
+        ? await reminders.tasks(current.reminderListId, false).catch((error) => {
+          console.warn('잔소리 Work 작업 조회 실패', error)
+          return []
+        })
         : []
       if (!configStore.get().naggingEnabled) return
       const item = pickNaggingWorkItem(items, state.workTouchedAt(), state.naggingRecentTaskIds())
       const news = current.slackNewsEnabled ? pickSlackNewsNagging(state.naggingSlackNews()) : null
-      const source = chooseNaggingSource(!!item, !!news)
+      const githubPr = current.githubPrNaggingEnabled ? state.naggingGithubPr()[0] ?? null : null
+      const source = chooseNaggingSource(!!item, !!news, !!githubPr)
+      if (source === 'github' && githubPr) {
+        state.dismissNaggingGithubPr(githubPr.id)
+        showNagging('github', githubPrNaggingLine(githubPr), { externalUrl: githubPr.url }, `${githubPr.repository} #${githubPr.number}`)
+        lastActivity = Date.now()
+        return
+      }
       if (source === 'slack' && news) {
         state.dismissNaggingSlackNews(news.id)
-        showNagging('slack', slackNewsNaggingLine(news), { slackNewsUrl: news.permalink }, `#${news.channelName}`)
+        showNagging('slack', slackNewsNaggingLine(news), { externalUrl: news.permalink }, `#${news.channelName}`)
         lastActivity = Date.now()
         return
       }
@@ -762,13 +816,16 @@ async function main(): Promise<void> {
   }
 
   scheduleNagging()
+  githubPrPoller.start()
+  buildCompletionPoller.start()
   setInterval(() => { void runPriorityNagging() }, 30_000)
   setTimeout(() => { void runPriorityNagging() }, 2_000)
 
   // 4) 감지원 부착: 봇(소켓) / 내 계정 검색 폴링 — config 플래그 + 토큰 존재 시
-  const botToken = await keychain.get(SecretKeys.slackBotToken)
-  const appToken = await keychain.get(SecretKeys.slackAppToken)
-  const userToken = await keychain.get(SecretKeys.slackUserToken)
+  const startupSecrets = startupSlackSecrets(config)
+  const botToken = startupSecrets.bot ? await keychain.get(SecretKeys.slackBotToken) : null
+  const appToken = startupSecrets.app ? await keychain.get(SecretKeys.slackAppToken) : null
+  let userToken = startupSecrets.user ? await keychain.get(SecretKeys.slackUserToken) : null
   if (userToken) gateway.attachUserToken(userToken)
   if (config.enableBot && botToken && appToken) {
     try {
@@ -779,6 +836,13 @@ async function main(): Promise<void> {
   }
   if (config.enableUserSearch && userToken && config.mySlackUserId) {
     gateway.attachUserSearch(userToken, config.mySlackUserId, config.searchIntervalSec)
+  }
+
+  async function ensureSlackUserToken(): Promise<string | null> {
+    if (userToken) return userToken
+    userToken = await keychain.get(SecretKeys.slackUserToken)
+    if (userToken) gateway?.attachUserToken(userToken)
+    return userToken
   }
 
   // 5) 명령 핸들러 (gateway 생성 이후 등록; gateway가 null이면 안전하게 무동작/기본값 반환)
@@ -924,25 +988,33 @@ async function main(): Promise<void> {
       dueAt: userDueAt ?? llmDueAt,
     })
   })
-  ipcMain.handle(CMD.threadImport, (_e, permalink: string) => {
+  ipcMain.handle(CMD.threadImport, async (_e, permalink: string) => {
     if (!gateway) return Promise.reject(new Error('Slack 연결을 초기화하지 못했습니다.'))
+    await ensureSlackUserToken()
     return gateway.importThread(permalink)
   })
   ipcMain.handle(CMD.todoToggle, (_e, a: TodoToggleArgs) => {
     gateway?.toggleTodo(a.mentionId, a.index)
   })
-  ipcMain.handle(CMD.replyApprove, (_e, id: string) => (gateway ? gateway.approveReply(id) : Promise.resolve({ ts: null })))
-  ipcMain.handle(CMD.reactionSet, (_e, a: ReactionSetArgs) =>
-    gateway ? gateway.setReaction(a.mentionId, a.messageTs, a.name, a.active) : Promise.resolve({ thread: [] }),
-  )
+  ipcMain.handle(CMD.replyApprove, async (_e, id: string) => {
+    if (!gateway) return { ts: null }
+    await ensureSlackUserToken()
+    return gateway.approveReply(id)
+  })
+  ipcMain.handle(CMD.reactionSet, async (_e, a: ReactionSetArgs) => {
+    if (!gateway) return { thread: [] }
+    await ensureSlackUserToken()
+    return gateway.setReaction(a.mentionId, a.messageTs, a.name, a.active)
+  })
   ipcMain.handle('dev.run', (_e, a: { mentionId: string; repoPaths: string[]; extraContext: string }) => {
     if (!gateway) return Promise.resolve()
     send(pet, EVT.chatBubble, { type: 'start' })
     return gateway.runDev(a.mentionId, a.repoPaths || [], a.extraContext || '')
   })
-  ipcMain.handle('reply.rewrite', (_e, a: { mentionId: string; style: string }) =>
-    gateway ? gateway.rewriteDraft(a.mentionId, a.style as never) : Promise.resolve({ text: '' }),
-  )
+  ipcMain.handle('reply.rewrite', async (_e, a: { mentionId: string; style: string }) => {
+    if (!gateway) return { text: '' }
+    return gateway.rewriteDraft(a.mentionId, a.style as never)
+  })
   // 자가발전: 사용자 피드백 반영(→ 교훈 축적 + 즉시 재분석) / 교훈 목록·삭제
   ipcMain.handle('feedback.send', (_e, a: { mentionId: string; text: string }) =>
     gateway ? gateway.feedback(a.mentionId, a.text || '') : Promise.resolve({ lesson: null }),
@@ -987,15 +1059,24 @@ async function main(): Promise<void> {
     send(pet, EVT.petTheme, c.petTheme)
     send(pet, EVT.petSize, c.petSizePercent)
     send(pet, EVT.bubbleSize, c.bubbleSizePercent)
+    send(pet, EVT.bubbleStackCount, c.bubbleStackCount)
+    send(pet, EVT.bubbleDuration, c.bubbleDurationSeconds)
     send(pet, EVT.hudSize, c.hudSizePercent)
     send(pet, EVT.hudAlignment, c.hudAlignment)
     send(pet, EVT.hudVisibility, c.showActivityHud)
     send(pet, EVT.petImages, petImagesFromDir(c.petImageDir))
     send(pet, EVT.petCodex, resolveCodexPet(c.petCodexDir))
     if (pet && !pet.isDestroyed()) pet.setAlwaysOnTop(c.petAlwaysOnTop) // 즉시 반영
-    if ('naggingEnabled' in patch || 'naggingMinMinutes' in patch || 'naggingMaxMinutes' in patch || 'slackNewsEnabled' in patch) {
+    if ('naggingEnabled' in patch || 'naggingMinMinutes' in patch || 'naggingMaxMinutes' in patch || 'githubPrNaggingEnabled' in patch || 'slackNewsEnabled' in patch) {
       scheduleNagging(true)
       if (c.naggingEnabled) void runPriorityNagging()
+    }
+    if ('naggingEnabled' in patch || 'githubPrNaggingEnabled' in patch) {
+      if (!c.naggingEnabled || !c.githubPrNaggingEnabled) state.clearNaggingGithubPr()
+      else void githubPrPoller?.pollNow()
+    }
+    if ('buildAlertsEnabled' in patch || 'xcodeBuildAlertsEnabled' in patch || 'androidBuildAlertsEnabled' in patch) {
+      void buildCompletionPoller?.pollNow()
     }
     if ('naggingEnabled' in patch || 'slackNewsEnabled' in patch || 'slackNewsChannels' in patch || 'slackNewsKeywords' in patch) {
       if (slackNewsChanged) state.clearNaggingSlackNews()
@@ -1046,9 +1127,9 @@ async function main(): Promise<void> {
     return readGlobalMcpCandidates().map((c) => ({ ...c, already: existing.has(c.id) }))
   })
   // 간편 연동 (노션·지라) — 토큰 Keychain 저장 + MCP 서버 자동 구성
-  ipcMain.handle('integration.status', async () => {
+  ipcMain.handle('integration.status', async (_e, verify = false) => {
     const status = await integrationStatus(configStore)
-    if (!status.jira.connected) return status
+    if (!verify || !status.jira.connected) return status
     const auth = await workStatus.jiraConnectionStatus()
     return { ...status, jira: { ...status.jira, ...auth } }
   })
@@ -1093,6 +1174,8 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true
   agentPoller?.stop()
+  githubPrPoller?.stop()
+  buildCompletionPoller?.stop()
   gateway?.stop().catch(() => {})
 })
 

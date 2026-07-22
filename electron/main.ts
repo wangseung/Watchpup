@@ -361,7 +361,7 @@ async function main(): Promise<void> {
       return { content: '' }
     }
   })
-  // 계획 논의(채팅): 제안 세션을 resume해 이어간다. 계획이 수정되면 커밋 수를 갱신.
+  // 계획 논의(채팅): 제안 세션을 resume해 이어간다. 계획 파일 수정은 카드가 다시 읽는다.
   ipcMain.handle(CMD.workAgentChat, async (_e, args: { reminderId: string; text: string }) => {
     const proposal = workAgent.proposal(args.reminderId)
     if (!proposal || proposal.status !== 'ready') throw new Error('논의할 제안이 없어요.')
@@ -370,10 +370,6 @@ async function main(): Promise<void> {
       text: String(args.text || '').trim(),
       onEvent: (event) => broadcast(EVT.workAgentChatStream, { reminderId: args.reminderId, event }),
     })
-    if (typeof result.commits === 'number' && result.commits !== proposal.commits) {
-      workAgent.setProposal({ ...proposal, commits: result.commits })
-      broadcastWorkAgent(args.reminderId)
-    }
     return { text: result.text }
   })
   ipcMain.handle('pet.images.get', () => petImagesFromDir(configStore.get().petImageDir))

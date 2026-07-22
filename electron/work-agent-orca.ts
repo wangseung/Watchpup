@@ -2,23 +2,19 @@
  * Work 자동 제안의 Orca 실행 모드: 제안 작업을 headless claude -p 대신
  * Orca 워크트리 터미널에서 눈에 보이게 실행한다 (claude 전용).
  *
- * 흐름: worktree 생성 → 과제 파일 작성 → orca repo add + terminal create(claude)
- * → 과제 지시 send → 커밋이 생길 때까지 폴링 → 통계 수집 → 제안 반환.
- * Orca가 없거나 스폰에 실패하면 null을 돌려줘 호출측이 headless로 폴백한다.
+ * 흐름: worktree 생성 → 과제 파일 작성 → orca terminal create(claude)
+ * → 과제 지시 send → 계획 파일(WATCHPUP-PLAN.md)이 생길 때까지 폴링 → 제안 반환.
+ * 커밋은 하지 않는다. Orca가 없거나 스폰에 실패하면 null을 돌려줘 headless로 폴백한다.
  */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import type { WatchpupConfig } from '../src/core/config/schema.js'
 import type { WorkItem } from '../src/core/work/types.js'
 import type { WorkProposal } from '../src/core/workagent/types.js'
-import {
-  createProposalWorktree,
-  lastCommitSubject,
-  type ProposalWorktree,
-} from '../src/core/workagent/run.js'
-import { workAgentSystemPrompt, workAgentPrompt, PLAN_FILE } from '../src/core/workagent/prompt.js'
+import { createProposalWorktree, type ProposalWorktree } from '../src/core/workagent/run.js'
+import { workAgentSystemPrompt, workAgentPrompt, planSummary, PLAN_FILE } from '../src/core/workagent/prompt.js'
 import { logger } from '../src/core/observability/logger.js'
 
 const pexec = promisify(execFile)
@@ -105,7 +101,6 @@ export async function runWorkProposalInOrca(
     branch: created.branch,
     worktreePath: wt,
     repoPath: input.repoPath,
-    baseRev: created.baseRev,
     startedAt: Date.now(),
   }
 
@@ -144,48 +139,37 @@ export async function runWorkProposalInOrca(
     return null
   }
 
-  // 계획 커밋이 생길 때까지 폴링. 터미널이 닫히면 중단.
+  // 계획 파일이 생기고 에이전트가 idle이 될 때까지 폴링. 터미널이 닫히면 중단.
+  const planPath = join(wt, PLAN_FILE)
+  const finalize = (): WorkProposal => {
+    let summary: string | undefined
+    try {
+      summary = planSummary(readFileSync(planPath, 'utf8')) || undefined
+    } catch { /* 요약 없이 진행 */ }
+    return { ...base, status: 'ready', orcaTerminal: handle ?? undefined, summary, finishedAt: Date.now() }
+  }
   const deadline = Date.now() + ORCA_RUN_TIMEOUT_MS
   while (Date.now() < deadline) {
     await sleep(POLL_MS)
-    const { commits, files } = await collectProposalCommitsSafe(wt, created.baseRev)
-    if (commits > 0) {
-      // 커밋 후 에이전트가 마무리 답변 중일 수 있으니 idle까지 잠깐 대기 (실패해도 무시)
-      await orca(['terminal', 'wait', '--terminal', handle, '--for', 'tui-idle', '--timeout-ms', '60000', '--json'], 70_000).catch(() => {})
-      const subject = await lastCommitSubject(wt)
-      return {
-        ...base,
-        status: 'ready',
-        orcaTerminal: handle,
-        summary: subject || undefined,
-        commits,
-        filesChanged: files.length,
-        finishedAt: Date.now(),
-      }
+    if (existsSync(planPath)) {
+      // 파일 생성 후에도 에이전트가 마저 작성 중일 수 있으니 idle까지 대기 (초과하면 다음 폴링에서 재시도)
+      const idle = await orca(['terminal', 'wait', '--terminal', handle, '--for', 'tui-idle', '--timeout-ms', '60000', '--json'], 70_000)
+        .then(() => true)
+        .catch(() => false)
+      if (idle) return finalize()
+      continue
     }
     const alive = await orca(['terminal', 'show', '--terminal', handle, '--json'], 10_000).then(() => true).catch(() => false)
     if (!alive) {
-      return { ...base, finishedAt: Date.now(), orcaTerminal: handle, error: `Orca 터미널이 닫혔어요. ${PLAN_FILE} 커밋 전에 중단된 것 같아요.` }
+      return { ...base, finishedAt: Date.now(), orcaTerminal: handle, error: `Orca 터미널이 닫혔어요. ${PLAN_FILE} 작성 전에 중단된 것 같아요.` }
     }
   }
+  if (existsSync(planPath)) return finalize()
   return {
     ...base,
     finishedAt: Date.now(),
     orcaTerminal: handle,
-    error: '시간 안에 계획 커밋이 없었어요. Orca 터미널에서 아직 진행 중일 수 있어요 — 확인 후 "다시 실행"으로 재시도하거나 터미널에서 마무리해주세요.',
-  }
-}
-
-/** 폴링 중에는 남은 변경 자동 커밋을 하지 않는다(에이전트가 작업 중) — 커밋 수만 센다. */
-async function collectProposalCommitsSafe(wt: string, baseRev: string): Promise<{ commits: number; files: string[] }> {
-  try {
-    const { stdout: countRaw } = await pexec('git', ['rev-list', '--count', `${baseRev}..HEAD`], { cwd: wt })
-    const commits = Number(countRaw.trim()) || 0
-    if (!commits) return { commits: 0, files: [] }
-    const { stdout: filesRaw } = await pexec('git', ['diff', '--name-only', `${baseRev}..HEAD`], { cwd: wt })
-    return { commits, files: filesRaw.trim().split('\n').filter(Boolean) }
-  } catch {
-    return { commits: 0, files: [] }
+    error: '시간 안에 계획 파일이 만들어지지 않았어요. Orca 터미널에서 아직 진행 중일 수 있어요 — 확인 후 "다시 실행"으로 재시도하거나 터미널에서 마무리해주세요.',
   }
 }
 

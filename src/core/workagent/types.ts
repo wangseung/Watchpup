@@ -1,6 +1,6 @@
 // ---- Work 자동 제안(에이전트) 도메인 ----
-// Work 탭 작업의 실행 계획(WATCHPUP-PLAN.md)을 격리 worktree에서 미리 세워 커밋해두고,
-// 사용자가 계획을 확인·논의(채팅)할 수 있게 제안하는 기능의 타입. 코드 작업은 하지 않는다.
+// Work 탭 작업의 실행 계획(WATCHPUP-PLAN.md)을 격리 worktree에 미리 작성해두고,
+// 사용자가 계획을 확인·논의(채팅)할 수 있게 제안하는 기능의 타입. 코드 작업·커밋은 하지 않는다.
 
 export type WorkAgentProvider = 'claude' | 'codex'
 
@@ -19,14 +19,10 @@ export interface WorkProposal {
   branch: string
   worktreePath: string
   repoPath: string
-  /** 분기 시점 커밋 — 커밋 수 계산 기준 */
-  baseRev?: string
   /** 세션 재개용 id (claude --resume / codex resume) */
   sessionId?: string
   /** Orca 터미널에서 실행된 경우 그 터미널 핸들 — 세션 열기 시 해당 터미널로 전환 */
   orcaTerminal?: string
-  commits?: number
-  filesChanged?: number
   startedAt: number
   finishedAt?: number
   error?: string

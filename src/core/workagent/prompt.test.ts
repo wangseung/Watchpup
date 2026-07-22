@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractProposalSummary, userNoteContent, workAgentPrompt, workAgentSystemPrompt, PLAN_FILE } from './prompt.js'
+import { extractProposalSummary, planSummary, userNoteContent, workAgentPrompt, workAgentSystemPrompt, PLAN_FILE } from './prompt.js'
 import type { WorkItem } from '../work/types.js'
 
 function item(overrides: Partial<WorkItem> = {}): WorkItem {
@@ -34,12 +34,20 @@ describe('workAgentPrompt', () => {
 })
 
 describe('workAgentSystemPrompt', () => {
-  it('plan 전용 규칙을 담는다: 코드 수정 금지 + plan 파일 커밋 + push 금지', () => {
+  it('plan 전용 규칙을 담는다: 코드 수정·커밋·push 금지 + plan 파일 작성', () => {
     const system = workAgentSystemPrompt()
     expect(system).toContain('코드를 수정하지 마라')
     expect(system).toContain(PLAN_FILE)
-    expect(system).toContain('push')
+    expect(system).toContain('커밋·push·PR도 하지 않는다')
     expect(system).toContain('한줄요약')
+  })
+})
+
+describe('planSummary', () => {
+  it('첫 헤딩을 우선 사용하고 없으면 첫 줄', () => {
+    expect(planSummary('\n# 로띠 업데이트 계획\n\n## 배경\n...')).toBe('로띠 업데이트 계획')
+    expect(planSummary('헤딩 없는 계획\n둘째 줄')).toBe('헤딩 없는 계획')
+    expect(planSummary('')).toBe('')
   })
 })
 

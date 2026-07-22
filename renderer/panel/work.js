@@ -366,7 +366,6 @@ async function renderWorkAgentSection(host, item) {
       card.append(el('div', 'work-agent-status', '📝 계획을 미리 세워뒀어요'))
       if (proposal.summary) card.append(el('p', 'work-agent-summary', proposal.summary))
       const bits = [providerLabel(proposal)]
-      if (proposal.commits) bits.push(`커밋 ${proposal.commits}`)
       if (proposal.branch) bits.push(proposal.branch)
       card.append(el('p', 'work-agent-meta', bits.join(' · ')))
 
@@ -419,7 +418,7 @@ async function renderWorkAgentSection(host, item) {
       const dismiss = el('button', '', '지우기')
       dismiss.type = 'button'
       dismiss.addEventListener('click', async () => {
-        if (!window.confirm('이 제안을 지울까요? worktree가 정리됩니다(커밋된 계획 브랜치는 유지).')) return
+        if (!window.confirm('이 제안을 지울까요? worktree와 계획 파일이 삭제됩니다.')) return
         dismiss.disabled = true
         try {
           await window.watchpup.workAgentDismiss(item.id)

@@ -1,7 +1,7 @@
 /**
- * Work 자동 제안 실행: 격리 git worktree에서 에이전트(claude/codex)가 실행 계획(WATCHPUP-PLAN.md)을
- * 세우고 커밋까지. dev.ts(개발→PR)와 같은 격리 패턴이지만 코드 작업·push·PR 없이 계획 커밋에서 멈추고,
- * worktree를 남겨 사용자가 세션(채팅/터미널)으로 계획을 논의할 수 있게 한다.
+ * Work 자동 제안 실행: 격리 git worktree에서 에이전트(claude/codex)가 실행 계획(WATCHPUP-PLAN.md)만
+ * 작성한다. 코드 작업·git 커밋·push·PR은 하지 않으며, worktree를 남겨 사용자가
+ * 세션(채팅/터미널)으로 계획을 논의할 수 있게 한다.
  */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -14,7 +14,7 @@ import { Keychain } from '../secrets/keychain.js'
 import { runClaude } from '../agent/executor.js'
 import { writeMcpConfigFile, resolveMcpSecretEnv } from '../mcp/registry.js'
 import { runCodex } from './codex.js'
-import { workAgentSystemPrompt, workAgentChatSystemPrompt, workAgentPrompt, extractProposalSummary } from './prompt.js'
+import { workAgentSystemPrompt, workAgentChatSystemPrompt, workAgentPrompt, extractProposalSummary, PLAN_FILE } from './prompt.js'
 import type { WorkAgentProvider, WorkProposal } from './types.js'
 import { logger } from '../observability/logger.js'
 
@@ -45,7 +45,6 @@ function shortId(reminderId: string): string {
 export interface ProposalWorktree {
   branch: string
   worktreePath: string
-  baseRev: string
 }
 
 /** 제안용 격리 worktree 생성. 실패 시 throw. */
@@ -58,31 +57,7 @@ export async function createProposalWorktree(repoPath: string, worktreeRoot: str
   mkdirSync(root, { recursive: true })
   const worktreePath = join(root, `${short}-${stamp}`)
   await git(['worktree', 'add', worktreePath, '-b', branch], repoPath)
-  const baseRev = await git(['rev-parse', 'HEAD'], worktreePath)
-  return { branch, worktreePath, baseRev }
-}
-
-/** 남은 변경 자동 커밋 후 base 이후 커밋 수·변경 파일 집계. */
-export async function collectProposalCommits(
-  worktreePath: string,
-  baseRev: string,
-  fallbackTitle: string,
-): Promise<{ commits: number; files: string[] }> {
-  const dirty = await git(['status', '--porcelain'], worktreePath)
-  if (dirty) {
-    await git(['add', '-A'], worktreePath)
-    await git(['commit', '-m', `watchpup: ${fallbackTitle || '자동 제안'}`], worktreePath)
-  }
-  const commits = Number(await git(['rev-list', '--count', `${baseRev}..HEAD`], worktreePath).catch(() => '0')) || 0
-  const files = commits
-    ? (await git(['diff', '--name-only', `${baseRev}..HEAD`], worktreePath).catch(() => '')).split('\n').filter(Boolean)
-    : []
-  return { commits, files }
-}
-
-/** worktree의 마지막 커밋 제목 (요약 폴백용). */
-export async function lastCommitSubject(worktreePath: string): Promise<string> {
-  return git(['log', '-1', '--pretty=%s'], worktreePath).catch(() => '')
+  return { branch, worktreePath }
 }
 
 /** 실행 결과를 항상 WorkProposal로 반환한다(실패도 failed 제안으로). 던지지 않음. */
@@ -110,9 +85,8 @@ export async function runWorkProposal(
     return { ...base, finishedAt: Date.now(), error: `worktree 생성 실패: ${String(e)}` }
   }
   const wt = created.worktreePath
-  const proposal: WorkProposal = { ...base, branch: created.branch, worktreePath: wt, baseRev: created.baseRev }
+  const proposal: WorkProposal = { ...base, branch: created.branch, worktreePath: wt }
   try {
-    const baseRev = created.baseRev
     const prompt = workAgentPrompt({ item: input.item, subtasks: input.subtasks, parent: input.parent })
     const system = workAgentSystemPrompt()
 
@@ -154,19 +128,19 @@ export async function runWorkProposal(
       isError = result.isError
     }
 
-    // 에이전트가 커밋을 안 남겼으면 남은 변경을 대신 커밋 (dev.ts와 동일한 안전망)
-    const { commits, files } = await collectProposalCommits(wt, baseRev, input.item.title)
-
-    if (isError && commits === 0) {
+    // 완료 판정: 계획 파일이 생겼는지 (커밋은 하지 않는다)
+    const planExists = existsSync(join(wt, PLAN_FILE))
+    if (isError && !planExists) {
       return { ...proposal, finishedAt: Date.now(), sessionId, error: text || '에이전트 실행에 실패했어요.' }
+    }
+    if (!planExists) {
+      return { ...proposal, finishedAt: Date.now(), sessionId, error: `${PLAN_FILE}이 작성되지 않았어요. 세션을 열어 확인해주세요.` }
     }
     return {
       ...proposal,
       status: 'ready',
       sessionId,
       summary: extractProposalSummary(text),
-      commits,
-      filesChanged: files.length,
       finishedAt: Date.now(),
     }
   } catch (e) {
@@ -178,13 +152,13 @@ export async function runWorkProposal(
 
 /**
  * 계획 논의: 제안을 만든 claude 세션을 worktree cwd로 resume해 이어서 대화한다.
- * 계획 수정 요청이면 에이전트가 plan 파일을 고치고 커밋한다(격리 worktree라 권한 bypass).
+ * 계획 수정 요청이면 에이전트가 plan 파일만 고친다(커밋 없음, 격리 worktree라 권한 bypass).
  * codex 제안은 in-app 채팅 미지원 — "세션 열기"(터미널)로 논의한다.
  */
 export async function chatWorkProposal(
   deps: { config: WatchpupConfig; keychain: Keychain },
   input: { proposal: WorkProposal; text: string; onEvent?: (e: AgentStreamEvent) => void },
-): Promise<{ text: string; commits?: number }> {
+): Promise<{ text: string }> {
   const { proposal } = input
   if (proposal.provider !== 'claude') throw new Error('Codex 제안은 "세션 열기"로 이어서 논의해주세요.')
   if (!proposal.sessionId) throw new Error('이어갈 세션이 없어요. "세션 열기"로 열어주세요.')
@@ -209,21 +183,17 @@ export async function chatWorkProposal(
     onEvent: input.onEvent,
   })
   if (result.isError) throw new Error(result.text || '논의 세션 실행에 실패했어요.')
-  // 계획이 수정·커밋되었을 수 있으니 커밋 수를 갱신해 돌려준다
-  const commits = proposal.baseRev
-    ? Number(await git(['rev-list', '--count', `${proposal.baseRev}..HEAD`], proposal.worktreePath).catch(() => '')) || undefined
-    : undefined
-  return { text: result.text, commits }
+  return { text: result.text }
 }
 
-/** 제안 정리: worktree 제거, 커밋 없는 브랜치는 함께 삭제 (커밋 있으면 브랜치 보존). */
+/** 제안 정리: worktree와 브랜치 제거 (커밋이 없으므로 남길 것도 없음 — 계획 파일도 함께 삭제됨). */
 export async function cleanupWorkProposal(proposal: WorkProposal): Promise<void> {
   const repo = proposal.repoPath
   if (!repo || !existsSync(join(repo, '.git'))) return
   if (proposal.worktreePath) {
     await git(['worktree', 'remove', proposal.worktreePath, '--force'], repo).catch(() => {})
   }
-  if (proposal.branch && !(proposal.commits && proposal.commits > 0)) {
+  if (proposal.branch) {
     await git(['branch', '-D', proposal.branch], repo).catch(() => {})
   }
 }

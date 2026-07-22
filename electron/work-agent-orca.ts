@@ -127,6 +127,9 @@ export async function runWorkProposalInOrca(
     if (!handle) throw new Error('터미널 핸들을 찾지 못함')
     await orca(['terminal', 'wait', '--terminal', handle, '--for', 'tui-idle', '--timeout-ms', '90000', '--json'], 100_000)
     await orca(['terminal', 'send', '--terminal', handle, '--text', `${taskPath} 파일을 읽고, 그 안의 지시를 이 worktree에서 그대로 수행해줘.`, '--enter', '--json'])
+    // 시작하자마자 Orca에서 바로 보이도록 해당 터미널로 전환. 수동 실행이면 Orca 앱도 앞으로.
+    await orca(['terminal', 'switch', '--terminal', handle, '--json']).catch(() => {})
+    if (input.source === 'manual') await orca(['open', '--json'], 10_000).catch(() => {})
   } catch (e) {
     logger.warn('Orca 터미널 스폰 실패 — headless 폴백', { err: String(e) })
     return null

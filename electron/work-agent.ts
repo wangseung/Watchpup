@@ -41,9 +41,10 @@ async function openInOrca(proposal: WorkProposal, command: string): Promise<bool
     await pexec('orca', terminalArgs, { timeout: 15_000 })
     return true
   } catch {
-    // worktree가 Orca에 등록돼 있지 않으면 폴더를 등록한 뒤 한 번 더 시도
+    // worktree가 해석되지 않으면 상위 레포를 등록한 뒤 한 번 더 시도.
+    // (worktree 폴더 자체를 repo add 하면 별도 워크스페이스가 중복 생성됨)
     try {
-      await pexec('orca', ['repo', 'add', '--path', proposal.worktreePath, '--json'], { timeout: 15_000 })
+      await pexec('orca', ['repo', 'add', '--path', proposal.repoPath, '--json'], { timeout: 15_000 })
       await pexec('orca', terminalArgs, { timeout: 15_000 })
       return true
     } catch {

@@ -115,14 +115,23 @@ export async function runWorkProposalInOrca(
 
   let handle: string | null = null
   try {
-    await orca(['repo', 'add', '--path', wt, '--json']).catch(() => '')
-    const createRaw = await orca([
+    // Orca는 등록된 레포의 외부 worktree를 자동 발견하므로 path 셀렉터로 바로 터미널을 만든다.
+    // (worktree 폴더를 repo add 하면 별도 워크스페이스가 중복 생성돼 지저분해짐)
+    const terminalArgs = [
       'terminal', 'create',
       '--worktree', `path:${resolve(wt)}`,
       '--title', `🐾 ${created.branch.split('/').pop() || 'work'}`,
       '--command', claudeCommand(deps.config, input.model),
       '--json',
-    ], 30_000)
+    ]
+    let createRaw: string
+    try {
+      createRaw = await orca(terminalArgs, 30_000)
+    } catch {
+      // worktree가 해석되지 않으면 상위 레포가 Orca에 미등록인 것 — 상위 레포를 등록 후 한 번 더
+      await orca(['repo', 'add', '--path', input.repoPath, '--json']).catch(() => '')
+      createRaw = await orca(terminalArgs, 30_000)
+    }
     handle = parseOrcaTerminalHandle(createRaw)
     if (!handle) throw new Error('터미널 핸들을 찾지 못함')
     await orca(['terminal', 'wait', '--terminal', handle, '--for', 'tui-idle', '--timeout-ms', '90000', '--json'], 100_000)

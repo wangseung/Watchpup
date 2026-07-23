@@ -171,6 +171,8 @@ async function main(): Promise<void> {
   // Work 자동 제안: Work 상위 작업을 격리 worktree에서 미리 진행하고 제안. 한 번에 하나만 실행.
   const workAgent = new WorkAgentStore(join(config.dataDir, 'work-agent.json'))
   let workAgentBusy = false
+  let workAgentRunningId: string | null = null
+  let workAgentAbort: AbortController | null = null
   const broadcastWorkAgent = (reminderId: string): void => {
     broadcast(EVT.workAgentChanged, { reminderId, proposal: workAgent.proposal(reminderId) ?? null })
   }
@@ -183,6 +185,9 @@ async function main(): Promise<void> {
     const repoPath = resolveWorkAgentRepo(prefs.repo)
     if (!repoPath) throw new Error('작업할 레포가 지정되지 않았어요. 작업 카드에서 레포를 골라주세요.')
     workAgentBusy = true
+    workAgentRunningId = item.id
+    workAgentAbort = new AbortController()
+    const signal = workAgentAbort.signal
     try {
       // 재실행이면 이전 worktree를 먼저 정리
       const previous = workAgent.proposal(item.id)
@@ -209,7 +214,7 @@ async function main(): Promise<void> {
       const worktreeRoot = join(current.dataDir, 'work-worktrees')
       // Orca 모드(claude 전용): Orca가 실행 중이면 터미널에서 눈에 보이게 실행, 아니면 headless 폴백
       let result = provider === 'claude' && current.workAgentUseOrca
-        ? await runWorkProposalInOrca({ config: deps.config }, { item, subtasks, repoPath, model, worktreeRoot, source, onUpdate })
+        ? await runWorkProposalInOrca({ config: deps.config }, { item, subtasks, repoPath, model, worktreeRoot, source, onUpdate, signal })
         : null
       result ??= await runWorkProposal({ config: deps.config, keychain }, {
         item,
@@ -220,6 +225,7 @@ async function main(): Promise<void> {
         worktreeRoot,
         source,
         onUpdate,
+        signal,
       })
       workAgent.setProposal(result)
       broadcastWorkAgent(item.id)
@@ -229,6 +235,8 @@ async function main(): Promise<void> {
       }
     } finally {
       workAgentBusy = false
+      workAgentRunningId = null
+      workAgentAbort = null
     }
   }
   workAgentPoller = new WorkAgentPoller(
@@ -372,6 +380,14 @@ async function main(): Promise<void> {
     // 실행은 수 분 걸릴 수 있어 시작만 하고, 결과는 workagent.changed 이벤트로 전달한다.
     void runWorkAgentFor(item, items.filter((candidate) => candidate.parentId === item.id), 'manual')
       .catch((e) => console.error('workagent 수동 실행 실패', e))
+    return { ok: true }
+  })
+  // 진행 중 실행 취소: 헤드리스는 서브프로세스 종료, Orca 모드는 터미널을 닫는다.
+  // 기록은 "취소" 실패로 남아 자동 재제안되지 않는다 (재실행은 수동).
+  ipcMain.handle(CMD.workAgentCancel, (_e, reminderId: string) => {
+    if (!workAgentBusy || !workAgentAbort) throw new Error('진행 중인 실행이 없어요.')
+    if (workAgentRunningId !== reminderId) throw new Error('이 작업이 아닌 다른 작업이 실행 중이에요.')
+    workAgentAbort.abort()
     return { ok: true }
   })
   ipcMain.handle(CMD.workAgentDismiss, async (_e, reminderId: string) => {

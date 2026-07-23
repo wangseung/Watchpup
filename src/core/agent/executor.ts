@@ -46,6 +46,8 @@ export interface RunOptions {
   dangerous?: boolean
   /** 스트림 이벤트 콜백 */
   onEvent?: (e: AgentStreamEvent) => void
+  /** 실행 취소 신호 — abort 시 서브프로세스를 종료한다 */
+  signal?: AbortSignal
 }
 
 // 지연 평가: 테스트가 import 이후 process.env.WATCHPUP_CLAUDE_BIN 을 설정하는 경우를 지원.
@@ -131,10 +133,19 @@ export function runClaude(opts: RunOptions): Promise<AgentResult> {
       setTimeout(() => child.kill('SIGKILL'), 3000)
     }, config.requestTimeoutMs)
 
+    const onAbort = (): void => {
+      logger.warn('claude 실행 취소 — 종료', { sessionId })
+      child.kill('SIGTERM')
+      setTimeout(() => child.kill('SIGKILL'), 3000)
+    }
+    if (opts.signal?.aborted) onAbort()
+    else opts.signal?.addEventListener('abort', onAbort, { once: true })
+
     const finish = (res: AgentResult): void => {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      opts.signal?.removeEventListener('abort', onAbort)
       resolve(res)
     }
 

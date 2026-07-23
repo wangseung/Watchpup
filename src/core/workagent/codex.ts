@@ -15,6 +15,8 @@ export interface CodexRunOptions {
   /** 빈 값이면 codex 기본 모델 */
   model?: string
   timeoutMs: number
+  /** 실행 취소 신호 — abort 시 서브프로세스를 종료한다 */
+  signal?: AbortSignal
 }
 
 export interface CodexRunResult {
@@ -84,10 +86,19 @@ export function runCodex(opts: CodexRunOptions): Promise<CodexRunResult> {
       setTimeout(() => child.kill('SIGKILL'), 3000)
     }, opts.timeoutMs)
 
+    const onAbort = (): void => {
+      logger.warn('codex 실행 취소 — 종료')
+      child.kill('SIGTERM')
+      setTimeout(() => child.kill('SIGKILL'), 3000)
+    }
+    if (opts.signal?.aborted) onAbort()
+    else opts.signal?.addEventListener('abort', onAbort, { once: true })
+
     const finish = (result: CodexRunResult): void => {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      opts.signal?.removeEventListener('abort', onAbort)
       rmSync(tempDir, { recursive: true, force: true })
       resolve(result)
     }

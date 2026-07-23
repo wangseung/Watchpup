@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('watchpup', {
   workAgentList: () => ipcRenderer.invoke(CMD.workAgentList),
   workAgentPrefsSet: (reminderId: string, prefs: unknown) => ipcRenderer.invoke(CMD.workAgentPrefsSet, { reminderId, prefs }),
   workAgentRun: (reminderId: string) => ipcRenderer.invoke(CMD.workAgentRun, reminderId),
+  workAgentCancel: (reminderId: string) => ipcRenderer.invoke(CMD.workAgentCancel, reminderId),
   workAgentDismiss: (reminderId: string) => ipcRenderer.invoke(CMD.workAgentDismiss, reminderId),
   workAgentOpen: (reminderId: string) => ipcRenderer.invoke(CMD.workAgentOpen, reminderId),
   workAgentPlan: (reminderId: string) => ipcRenderer.invoke(CMD.workAgentPlan, reminderId),

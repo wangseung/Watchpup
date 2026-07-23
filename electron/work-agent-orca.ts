@@ -74,6 +74,8 @@ export interface OrcaProposalInput {
   source: 'auto' | 'manual'
   /** 실행 중 확보되는 정보(worktree·터미널 핸들)를 즉시 저장 — 재시작 복구용 */
   onUpdate?: (patch: Partial<WorkProposal>) => void
+  /** 사용자 취소 신호 — abort 시 Orca 터미널을 닫고 취소 처리한다 */
+  signal?: AbortSignal
 }
 
 /**
@@ -159,6 +161,10 @@ export async function runWorkProposalInOrca(
   const deadline = Date.now() + ORCA_RUN_TIMEOUT_MS
   while (Date.now() < deadline) {
     await sleep(POLL_MS)
+    if (input.signal?.aborted) {
+      await orca(['terminal', 'close', '--terminal', handle, '--json']).catch(() => {})
+      return { ...base, finishedAt: Date.now(), orcaTerminal: handle, error: '취소했어요.' }
+    }
     if (existsSync(planPath)) {
       // 파일 생성 후에도 에이전트가 마저 작성 중일 수 있으니 idle까지 대기 (초과하면 다음 폴링에서 재시도)
       const idle = await orca(['terminal', 'wait', '--terminal', handle, '--for', 'tui-idle', '--timeout-ms', '60000', '--json'], 70_000)

@@ -38,6 +38,8 @@ export interface WorkProposalInput {
   onEvent?: (e: AgentStreamEvent) => void
   /** 실행 중 확보되는 정보(worktree·세션 id 등)를 즉시 저장할 수 있게 알림 — 재시작 복구용 */
   onUpdate?: (patch: Partial<WorkProposal>) => void
+  /** 사용자 취소 신호 */
+  signal?: AbortSignal
 }
 
 function shortId(reminderId: string): string {
@@ -120,6 +122,7 @@ export async function runWorkProposal(
         cwd: wt,
         model: input.model,
         timeoutMs: deps.config.requestTimeoutMs,
+        signal: input.signal,
       })
       text = result.text
       sessionId = result.sessionId
@@ -149,12 +152,16 @@ export async function runWorkProposal(
           }
           input.onEvent?.(event)
         },
+        signal: input.signal,
       })
       text = result.text
       sessionId = result.sessionId ?? sessionId
       isError = result.isError
     }
 
+    if (input.signal?.aborted) {
+      return { ...proposal, finishedAt: Date.now(), sessionId, error: '취소했어요.' }
+    }
     // 완료 판정: 계획 파일이 생겼는지 (커밋은 하지 않는다)
     const planExists = existsSync(join(wt, PLAN_FILE))
     if (isError && !planExists) {

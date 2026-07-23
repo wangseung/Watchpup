@@ -414,6 +414,7 @@ async function renderWorkAgentSection(host, item) {
       card.append(el('div', 'work-agent-status', '⏳ 계획 세우는 중…'))
       const started = new Date(proposal.startedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
       card.append(el('p', 'work-agent-meta', `${providerLabel(proposal)} · ${started} 시작 · 진행 상황은 Agent 탭에서`))
+      const runningActions = el('div', 'work-agent-actions')
       if (proposal.orcaTerminal) {
         const watch = el('button', 'primary', 'Orca에서 보기')
         watch.type = 'button'
@@ -424,10 +425,24 @@ async function renderWorkAgentSection(host, item) {
             hintEl.textContent = error?.message || 'Orca 터미널을 열지 못했습니다.'
           }
         })
-        const actions = el('div', 'work-agent-actions')
-        actions.append(watch)
-        card.append(actions)
+        runningActions.append(watch)
       }
+      const cancel = el('button', '', '취소')
+      cancel.type = 'button'
+      cancel.addEventListener('click', async () => {
+        if (!window.confirm('진행 중인 계획 작업을 취소할까요?')) return
+        cancel.disabled = true
+        cancel.textContent = '취소 중…'
+        try {
+          await window.watchpup.workAgentCancel(item.id)
+        } catch (error) {
+          hintEl.textContent = error?.message || '취소하지 못했습니다.'
+          cancel.disabled = false
+          cancel.textContent = '취소'
+        }
+      })
+      runningActions.append(cancel)
+      card.append(runningActions)
     } else if (proposal.status === 'ready') {
       card.append(el('div', 'work-agent-status', '📝 계획을 미리 세워뒀어요'))
       if (proposal.summary) card.append(el('p', 'work-agent-summary', proposal.summary))

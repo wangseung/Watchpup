@@ -44,6 +44,7 @@ export const CMD = {
   workAgentList: 'workagent.list',
   workAgentPrefsSet: 'workagent.prefs.set',
   workAgentRun: 'workagent.run',
+  workAgentCancel: 'workagent.cancel',
   workAgentDismiss: 'workagent.dismiss',
   workAgentOpen: 'workagent.open',
   workAgentPlan: 'workagent.plan.read',

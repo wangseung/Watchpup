@@ -3,10 +3,9 @@
  */
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
 import { promisify } from 'node:util'
 import type { WatchpupConfig } from '../src/core/config/schema.js'
-import type { WorkItem } from '../src/core/work/types.js'
 import type { WorkProposal } from '../src/core/workagent/types.js'
 import { switchToOrcaTerminal } from './work-agent-orca.js'
 
@@ -76,26 +75,12 @@ export async function openProposalSession(proposal: WorkProposal): Promise<{ via
   return { via: 'terminal' }
 }
 
-/** GitHub owner/repo 링크에서 repo 이름 추출 (매칭용). */
-export function githubRepoName(url: string): string | null {
-  const match = url.match(/github\.com\/[^/\s]+\/([^/\s?#]+)/i)
-  return match ? match[1].replace(/\.git$/i, '').toLowerCase() : null
-}
-
 /**
- * 작업할 레포 결정: 태스크별 지정 레포 → 작업의 GitHub 링크와 등록 레포 이름 매칭
- * → 설정의 기본 레포 → 첫 등록 레포. 없으면 null.
+ * 작업할 레포 결정: 태스크별 지정 레포 → 설정의 기본 레포. 자동 추론은 하지 않는다.
+ * 둘 다 없으면 null — 자동 제안 대상에서 제외되고, 수동 실행은 레포 지정을 안내한다.
  */
-export function resolveWorkAgentRepo(item: WorkItem, config: WatchpupConfig, preferredRepo?: string): string | null {
+export function resolveWorkAgentRepo(config: WatchpupConfig, preferredRepo?: string): string | null {
   if (preferredRepo && existsSync(join(preferredRepo, '.git'))) return preferredRepo
-  const repos = (config.repos ?? []).filter((path) => existsSync(join(path, '.git')))
-  for (const link of item.links ?? []) {
-    if (link.kind !== 'github') continue
-    const name = githubRepoName(link.url)
-    if (!name) continue
-    const matched = repos.find((path) => basename(path).toLowerCase() === name)
-    if (matched) return matched
-  }
   if (config.workAgentRepo && existsSync(join(config.workAgentRepo, '.git'))) return config.workAgentRepo
-  return repos[0] ?? null
+  return null
 }

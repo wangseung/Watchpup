@@ -272,7 +272,7 @@ async function renderWorkAgentRepoOptions(current) {
   try {
     repos = await window.watchpup.reposList()
   } catch { /* 레포 목록이 없어도 자동 옵션은 유지 */ }
-  const options = [{ value: '', label: '자동 (GitHub 링크 매칭 → 첫 레포)' }, ...repos.map((path) => ({ value: path, label: path }))]
+  const options = [{ value: '', label: '없음 — 레포 지정된 작업만 자동 제안' }, ...repos.map((path) => ({ value: path, label: path }))]
   if (current && !repos.includes(current)) options.push({ value: current, label: `현재 저장값 (${current})` })
   select.replaceChildren(...options.map(({ value, label }) => {
     const option = document.createElement('option')

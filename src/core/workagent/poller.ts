@@ -6,6 +6,7 @@
  * 자동 제안 제외 조건:
  *  - 태스크별 설정에서 자동 제안 off (prefs.auto === false)
  *  - 이미 제안 기록이 있는 작업 (ready/failed 포함 — 재실행은 사용자가 직접)
+ *  - 작업할 레포가 정해지지 않은 작업 (태스크별 지정도, 전역 기본 레포도 없음)
  */
 import type { WorkItem } from '../work/types.js'
 import type { WorkProposal, WorkTaskPrefs } from './types.js'
@@ -27,6 +28,8 @@ export interface WorkAgentTarget {
 interface TargetStore {
   proposal(reminderId: string): WorkProposal | undefined
   prefs(reminderId: string): WorkTaskPrefs
+  /** 이 작업이 실행될 레포 경로 (없으면 null → 자동 제안 제외) */
+  resolveRepo(item: WorkItem): string | null
 }
 
 function compareDueThenTitle(a: WorkItem, b: WorkItem): number {
@@ -65,6 +68,7 @@ export function pickAutoTarget(
   for (const item of candidates) {
     if (store.prefs(item.id).auto === false) continue
     if (store.proposal(item.id)) continue
+    if (!store.resolveRepo(item)) continue
     return { item, subtasks: items.filter((candidate) => candidate.parentId === item.id) }
   }
   return null

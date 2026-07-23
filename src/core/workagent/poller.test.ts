@@ -19,10 +19,15 @@ function item(overrides: Partial<WorkItem> = {}): WorkItem {
   }
 }
 
-function storeWith(input: { proposals?: Record<string, WorkProposal>; prefs?: Record<string, WorkTaskPrefs> } = {}) {
+function storeWith(input: {
+  proposals?: Record<string, WorkProposal>
+  prefs?: Record<string, WorkTaskPrefs>
+  resolveRepo?: (target: WorkItem) => string | null
+} = {}) {
   return {
     proposal: (id: string) => input.proposals?.[id],
     prefs: (id: string) => input.prefs?.[id] ?? {},
+    resolveRepo: input.resolveRepo ?? (() => '/repo'),
   }
 }
 
@@ -83,6 +88,13 @@ describe('pickAutoTarget', () => {
       ['t1', 't2', 't3', 't4'].map((id) => [id, { reminderId: id, status: 'ready' } as WorkProposal]),
     )
     expect(pickAutoTarget(items, config, storeWith({ proposals: allDone }))).toBeNull()
+  })
+
+  it('레포가 정해지지 않은 작업은 건너뛴다', () => {
+    const items = [item({ id: 'no-repo', dueAt: 1 }), item({ id: 'with-repo', dueAt: 2 })]
+    const store = storeWith({ resolveRepo: (target) => (target.id === 'with-repo' ? '/repo' : null) })
+    expect(pickAutoTarget(items, config, store)?.item.id).toBe('with-repo')
+    expect(pickAutoTarget([items[0]], config, store)).toBeNull()
   })
 
   it('선택된 작업의 서브태스크를 함께 돌려준다', () => {
